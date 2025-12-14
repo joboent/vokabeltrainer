@@ -1,0 +1,2477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vocabulary Trainer — Clean Edition</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        
+        body { font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* 3D Flip Styles */
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .card-inner { transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .is-flipped { transform: rotateY(180deg); }
+        
+        /* Animations */
+        @keyframes pop { 0% { transform: scale(0.9); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s ease-out; }
+        
+        @keyframes gradientShift { 
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animate-gradient {
+            background-size: 400% 400%;
+            animation: gradientShift 60s ease infinite;
+        }
+
+        .floating-bg {
+            position: absolute;
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+        /* Motivation & Zen Animations */
+        @keyframes float-slow { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-15px) rotate(5deg); } }
+        .animate-float-slow { animation: float-slow 4s ease-in-out infinite; }
+        
+        @keyframes breath { 
+            0%, 100% { transform: scale(1); opacity: 0.4; box-shadow: 0 0 20px rgba(255,255,255,0.1); } 
+            50% { transform: scale(1.3); opacity: 0.8; box-shadow: 0 0 40px rgba(255,255,255,0.3); } 
+        }
+        .animate-breath { animation: breath 6s ease-in-out infinite; }
+        
+        .zen-enter { transition: opacity 2s ease-in-out; }
+        
+        @keyframes zen-colors {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animate-zen-bg {
+            background: linear-gradient(135deg, #0f172a, #134e4a, #1e1b4b, #312e81);
+            background-size: 300% 300%;
+            animation: zen-colors 15s ease infinite;
+        }
+        
+        .animate-zen-start-bg {
+            background: linear-gradient(135deg, #047857, #be185d, #065f46, #9d174d); 
+            background-size: 300% 300%;
+            animation: zen-colors 15s ease infinite;
+        }
+
+        /* SCREEN GLOW EFFECT (Rainbow Pulse) - Applied ONLY to Body */
+        @keyframes rainbow-glow {
+            0% { box-shadow: inset 0 0 0px 0px rgba(255, 255, 255, 0); }
+            20% { box-shadow: inset 0 0 30px 10px rgba(59, 130, 246, 0.4); } /* Blue */
+            50% { box-shadow: inset 0 0 60px 20px rgba(168, 85, 247, 0.5); } /* Purple */
+            80% { box-shadow: inset 0 0 30px 10px rgba(236, 72, 153, 0.4); } /* Pink */
+            100% { box-shadow: inset 0 0 0px 0px rgba(255, 255, 255, 0); }
+        }
+        /* Specific selector to ensure it stays on body */
+        body.glow-active {
+            animation: rainbow-glow 2s ease-in-out forwards;
+        }
+
+        /* Focus Timer Animation */
+        @keyframes progress-fill { from { width: 0%; } to { width: 100%; } }
+        .animate-timer { animation: progress-fill 5s linear forwards; }
+
+        .btn-press:active { transform: translateY(2px); box-shadow: none; border-bottom-width: 0; margin-top: 4px; }
+
+        /* --- ARCADE GAME STYLES (IMPORTED) --- */
+        .game-canvas {
+            image-rendering: pixelated;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            perspective: 1000px; 
+        }
+        .memory-card {
+            aspect-ratio: 1;
+            background: #fff;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.6s, background-color 0.3s, box-shadow 0.3s;
+            transform-style: preserve-3d;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 2px solid #e5e7eb;
+            user-select: none;
+            position: relative;
+        }
+        .memory-card span {
+            transform: rotateY(180deg);
+            backface-visibility: visible;
+        }
+        .memory-card.flipped {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            transform: rotateY(180deg);
+        }
+        .memory-card.matched {
+            background: #d1fae5;
+            border-color: #10b981;
+            animation: match-glow 0.8s ease-out forwards;
+            transform: rotateY(180deg); 
+            box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+        @keyframes match-glow {
+            0% { 
+                transform: rotateY(180deg) scale(1);
+                box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0);
+                border-color: #10b981;
+            }
+            50% { 
+                transform: rotateY(180deg) scale(1.05);
+                box-shadow: inset 0 0 25px 5px rgba(16, 185, 129, 0.8);
+                border-color: #34d399;
+                background: #ecfdf5;
+            }
+            100% { 
+                transform: rotateY(180deg) scale(1);
+                box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.3);
+                border-color: #10b981;
+                background: #d1fae5;
+            }
+        }
+        @keyframes tile-glow {
+            0% { 
+                transform: scale(1);
+                box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0);
+                border-color: #e5e7eb;
+            }
+            50% { 
+                transform: scale(1.1);
+                box-shadow: inset 0 0 15px 2px rgba(16, 185, 129, 0.8);
+                border-color: #10b981;
+                background: #ecfdf5;
+                color: #065f46;
+            }
+            100% { 
+                transform: scale(1);
+                box-shadow: inset 0 0 5px rgba(16, 185, 129, 0.2);
+                border-color: #10b981;
+                background: #f0fdf4;
+                color: #10b981;
+            }
+        }
+        #limit-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 3s ease-in-out; 
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+        }
+        #limit-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+            background-image: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+        }
+        @keyframes strong-pulse {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.15); filter: brightness(1.1) drop-shadow(0 0 4px rgba(220, 38, 38, 0.4)); }
+        }
+        .animate-strong-pulse {
+            animation: strong-pulse 2s infinite ease-in-out;
+        }
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 180px;
+            margin: 0 auto;
+        }
+        .d-btn {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .d-btn:active { background: #ddd; }
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .game-char {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            margin: 2px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            font-weight: bold;
+            min-width: 24px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .game-char.word-spacing { margin-right: 8px; padding: 4px 10px; }
+        .game-char.eaten { color: #10b981; border-color: #10b981; background: #f0fdf4; }
+        .game-char.just-eaten { animation: tile-glow 0.6s ease-out forwards; }
+        .game-char.active {
+            color: #ef4444; border-color: #ef4444;
+            transform: scale(1.1); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+            z-index: 10;
+        }
+        .game-char.pending { color: #94a3b8; opacity: 0.7; }
+    </style>
+</head>
+<body id="main-body" class="bg-gradient-to-br from-slate-100 via-white to-blue-50 min-h-screen flex flex-col items-center font-sans text-slate-800 select-none overflow-hidden animate-gradient transition-all duration-500">
+
+    <!-- Background Elements -->
+    <div id="bg-elements" class="absolute inset-0 overflow-hidden pointer-events-none w-full h-full"></div>
+
+    <!-- Motivation Overlay -->
+    <div id="motivation-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/95 backdrop-blur-md hidden opacity-0 transition-opacity duration-500">
+        <div id="motivation-content" class="text-center transform scale-90 transition-transform duration-500 flex flex-col items-center px-6">
+            <div id="motivation-icon" class="text-9xl mb-8 filter drop-shadow-xl animate-float-slow">🌞</div>
+            <h2 id="motivation-text" class="text-3xl font-black text-slate-700 mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600">
+                You can do it!
+            </h2>
+            <p class="text-slate-400 font-bold">Take your time.</p>
+        </div>
+    </div>
+    
+    <!-- Zen Mode Overlay -->
+    <div id="zen-overlay" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900 text-white hidden opacity-0 zen-enter">
+        <div id="zen-bg" class="absolute inset-0 animate-zen-bg opacity-90"></div>
+        <div class="z-10 text-center space-y-12 px-6">
+            <h2 id="zen-title" class="text-3xl md:text-5xl font-extralight tracking-[0.2em] text-teal-50 opacity-90 leading-tight">
+                TIME FOR A<br>SHORT BREAK
+            </h2>
+            <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full bg-teal-400/20 animate-breath" style="animation-delay: 0s;"></div>
+                <div class="absolute inset-4 rounded-full bg-teal-300/20 animate-breath" style="animation-delay: 1s;"></div>
+                <div class="relative z-10 text-6xl opacity-80 filter drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">🧘</div>
+            </div>
+            <p id="zen-subtitle" class="text-teal-200/50 font-light text-sm tracking-[0.3em] uppercase animate-pulse">
+                Breathe in deeply... and out...
+            </p>
+        </div>
+    </div>
+
+    <!-- Break Selection Overlay -->
+    <div id="break-selection-overlay" class="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm text-white hidden opacity-0 transition-opacity duration-500">
+        <h2 class="text-3xl font-black mb-8 text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-blue-200">CHOOSE YOUR BREAK</h2>
+        <div class="grid grid-cols-2 gap-6 px-6 max-w-md w-full">
+            <button onclick="chooseBreak('zen')" class="bg-teal-700/50 hover:bg-teal-600/50 border-2 border-teal-500/50 rounded-2xl p-6 flex flex-col items-center gap-4 transition hover:scale-105 group">
+                <div class="text-6xl filter drop-shadow-lg group-hover:scale-110 transition">🧘</div>
+                <div class="text-xl font-bold">Zen Mode</div>
+                <div class="text-xs text-teal-200 uppercase tracking-widest font-bold">Relax & Breathe</div>
+            </button>
+            <button onclick="chooseBreak('game')" class="bg-indigo-700/50 hover:bg-indigo-600/50 border-2 border-indigo-500/50 rounded-2xl p-6 flex flex-col items-center gap-4 transition hover:scale-105 group">
+                <div class="text-6xl filter drop-shadow-lg group-hover:scale-110 transition">👾</div>
+                <div class="text-xl font-bold">Arcade</div>
+                <div class="text-xs text-indigo-200 uppercase tracking-widest font-bold">Mini Game</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- ARCADE OVERLAY (Replaces placeholder) -->
+    <div id="game-overlay" class="fixed inset-0 z-[200] flex flex-col bg-slate-50 text-slate-800 hidden overflow-hidden">
+        <!-- Header / Stats -->
+        <header class="bg-white p-4 shadow-md flex justify-between items-center z-10 shrink-0 relative overflow-hidden h-20">
+            <h1 class="font-bold text-xl text-indigo-600 whitespace-nowrap z-20 relative drop-shadow-sm bg-white/50 px-1 rounded">Vocab Arcade</h1>
+            
+            <div id="playtime-warning-container" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <span id="playtime-warning" class="text-xl sm:text-2xl font-black tracking-widest uppercase animate-strong-pulse whitespace-nowrap transition-all duration-1000" style="color: rgba(220, 38, 38, 0);"></span>
+            </div>
+
+            <div class="flex gap-2 shrink-0 z-20 relative">
+                <div class="flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full shadow-sm">
+                    <span>💎</span>
+                    <span id="gem-count" class="font-bold text-indigo-700">0</span>
+                </div>
+                <div id="timer-display" class="flex items-center gap-1 bg-orange-50 px-3 py-1 rounded-full hidden shadow-sm">
+                    <span>⏳</span>
+                    <span id="time-left" class="font-bold text-orange-700">60</span>s
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow relative overflow-y-auto flex flex-col items-center justify-start p-4 bg-slate-50">
+            
+            <!-- MENU SCREEN -->
+            <div id="menu-screen" class="w-full max-w-md space-y-6 text-center mt-10">
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                    <h2 class="text-2xl font-bold mb-2">Need a study break?</h2>
+                    <p class="text-slate-500 text-sm mb-6">Use your gems to play a round. Each game is time-limited.</p>
+                    
+                    <!-- Game Selection -->
+                    <div class="grid gap-3">
+                        <button onclick="app.startGame('snake')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🐛</span>
+                                <div class="text-left">
+                                    <div class="font-bold">Word Worm</div>
+                                    <div class="text-xs text-slate-400">Snake with sentences</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
+                        </button>
+
+                        <button onclick="app.startGame('tetris')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-purple-500 hover:bg-purple-50 transition-all">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🧱</span>
+                                <div class="text-left">
+                                    <div class="font-bold">Block Sentences</div>
+                                    <div class="text-xs text-slate-400">1 Line = 1 Word</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
+                        </button>
+
+                        <button onclick="app.startGame('memory')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-green-500 hover:bg-green-50 transition-all">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🧠</span>
+                                <div class="text-left">
+                                    <div class="font-bold">Memo Match</div>
+                                    <div class="text-xs text-slate-400">Image & Word Pairs</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
+                        </button>
+                    </div>
+                </div>
+                <!-- Added Return Button -->
+                <button onclick="closeArcade()" class="mt-6 w-full text-slate-400 font-bold hover:text-slate-600 transition">Back to Learning</button>
+            </div>
+
+            <!-- GAME CONTAINER -->
+            <div id="game-container" class="hidden relative w-full h-full flex flex-col items-center justify-start pt-4">
+                
+                <div id="game-sentence-display" class="hidden w-full max-w-[340px] mb-4 p-4 bg-white rounded-xl shadow-lg border border-indigo-100 text-center text-xl font-mono z-20 min-h-[80px] flex items-center justify-center flex-wrap gap-1"></div>
+
+                <canvas id="gameCanvas" width="300" height="400" class="hidden bg-slate-800 rounded-lg shadow-xl mb-4 shrink-0"></canvas>
+                
+                <div id="memoryBoard" class="hidden w-full h-full max-h-[400px] overflow-y-auto mb-4"></div>
+
+                <div id="controls" class="hidden w-full pb-8 shrink-0">
+                    <div class="d-pad">
+                        <div></div>
+                        <button class="d-btn" id="btn-up" onclick="app.handleInput('ArrowUp')">⬆️</button>
+                        <div></div>
+                        <button class="d-btn" id="btn-left" onclick="app.handleInput('ArrowLeft')">⬅️</button>
+                        <button class="d-btn" id="btn-down" onclick="app.handleInput('ArrowDown')">⬇️</button>
+                        <button class="d-btn" id="btn-right" onclick="app.handleInput('ArrowRight')">➡️</button>
+                    </div>
+                     <div class="flex justify-center mt-2">
+                        <button id="btn-action" class="hidden d-btn w-32 rounded-full text-sm font-bold" onclick="app.handleInput('Action')">Rotate</button>
+                     </div>
+                </div>
+            </div>
+
+            <!-- GAME OVER / PAUSE OVERLAY -->
+            <div id="overlay-screen" class="hidden overlay">
+                <div class="text-center p-6 bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+                    <div class="text-4xl mb-2" id="overlay-icon">⏰</div>
+                    <h2 class="text-2xl font-bold mb-2" id="overlay-title">Time's up!</h2>
+                    <p class="text-slate-500 mb-6" id="overlay-msg">Your playtime is over.</p>
+                    
+                    <div id="overlay-actions" class="flex flex-col gap-3 items-center">
+                        <button id="btn-continue" onclick="app.continueGame()" class="hidden w-full bg-green-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-600 transition-colors shadow-md border-b-4 border-green-600 active:border-b-0 active:translate-y-1">
+                            Continue (+30s) for 15 💎
+                        </button>
+
+                        <div class="flex gap-2 justify-center w-full">
+                            <button onclick="app.showMenu()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors">Menu</button>
+                            <button onclick="app.restartGame()" class="flex-1 bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold hover:bg-slate-300 transition-colors">Restart (-15 💎)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIMIT OVERLAY -->
+            <div id="limit-overlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center">
+                <div class="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-2xl max-w-md w-full border-4 border-white/50">
+                    <div class="text-6xl mb-4">🛑</div>
+                    <h2 class="text-3xl font-extrabold text-pink-700 mb-4">Enough playing!</h2>
+                    <p class="text-lg text-slate-700 mb-8 font-medium">
+                        You've played for 10 minutes today.<br>
+                        Time to get back to studying!
+                    </p>
+
+                    <div class="space-y-4">
+                        <button id="btn-unlock-limit" onclick="app.unlockExtension()" class="w-full bg-pink-500 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-pink-600 transition-all border-b-4 border-pink-700 active:translate-y-1 active:border-b-0">
+                            Unlock 10 min once (500 💎)
+                        </button>
+                        <!-- MODIFIED: Return to App logic -->
+                        <button onclick="closeArcade()" class="block w-full text-slate-500 hover:text-slate-800 font-bold py-2">
+                            Return to Training
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-root" class="w-full max-w-md flex flex-col h-full flex-grow relative z-10 px-4 py-6">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 w-full">
+            <button id="btn-settings-toggle" class="bg-white/80 backdrop-blur-sm p-2 rounded-xl shadow-sm border border-white/50 text-slate-600 hover:bg-white transition">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+            </button>
+            
+            <div class="flex gap-2 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-xl shadow-sm border border-white/50">
+                <div class="flex items-center gap-1 text-orange-500 font-black" title="Daily Streak">
+                    <i data-lucide="flame" class="w-4 h-4 fill-current"></i>
+                    <span id="streak-display" class="text-sm">0</span>
+                </div>
+                <div class="w-px h-4 bg-slate-200"></div>
+                <!-- Blue Gems -->
+                <div class="flex items-center gap-1 text-blue-500 font-black" title="Total XP">
+                    <i data-lucide="gem" class="w-4 h-4 fill-current"></i>
+                    <span id="xp-display" class="text-sm">0</span>
+                </div>
+                <div class="w-px h-4 bg-slate-200"></div>
+                <div class="flex items-center gap-1 text-indigo-500 font-black" title="Long-term Memory">
+                    <i data-lucide="brain" class="w-4 h-4 fill-current"></i>
+                    <span id="ltm-display" class="text-sm">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-grow flex flex-col w-full relative perspective-1000">
+            <!-- Dynamic Content -->
+        </main>
+
+        <!-- Footer -->
+        <div class="mt-4 text-center">
+            <small class="text-slate-400 text-xs font-semibold block">Vocabulary Trainer v7.2 • Clean & Stable</small>
+            <small class="text-slate-300 text-[10px] font-bold">© Jean Marz 2025</small>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white w-full max-w-sm mx-4 rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300 border-2 border-slate-100 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-slate-700">Settings</h2>
+                <button id="btn-close-settings" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Session Config -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Session</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-sm font-bold text-slate-600 mb-1 block">Select Level</span>
+                            <div class="relative">
+                                <select id="level-select" class="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-xl px-3 py-2 appearance-none focus:outline-none focus:border-blue-500 transition">
+                                    <!-- Options populated dynamically -->
+                                </select>
+                                <i data-lucide="chevron-down" class="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-sm font-bold text-slate-600 mb-1 block">Cards per Session</span>
+                            <input id="session-size" type="number" min="1" max="100" value="15" class="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-xl px-3 py-2 text-center focus:outline-none focus:border-blue-500 transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server Packs Section -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Available Packs</label>
+                    <div id="server-packs-list" class="relative">
+                        <div class="text-xs text-slate-400 italic text-center p-2">Loading packs...</div>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Data Management</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="btn-export" class="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition text-xs">
+                            <i data-lucide="download" class="w-4 h-4"></i> Backup
+                        </button>
+                        <button id="btn-import" class="flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-600 font-bold py-3 rounded-xl transition text-xs">
+                            <i data-lucide="upload" class="w-4 h-4"></i> Restore
+                        </button>
+                    </div>
+                    <div class="mt-2 text-xs text-center text-slate-400">
+                        Status: <span id="store-status">Ready</span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-between">
+                    <button id="btn-reset-app" class="text-rose-400 font-bold text-xs hover:text-rose-600 transition">Reset All Data</button>
+                    <!-- Debug Heart: Quick Game Launch -->
+                    <button onclick="startArcadeDebug()" class="text-rose-500 hover:text-rose-600 transition opacity-30 hover:opacity-100 p-2 text-sm" title="Test: Start Arcade">
+                        ❤️
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Elements -->
+    <div id="aria-announcer" aria-live="polite" class="sr-only"></div>
+
+    <script>
+    // --- 1. CONFIGURATION & VARIABLES ---
+    const PACKS_DIR = "./vokabelpakete/";
+    const LIST_FILE = "liste.json";
+    const AVAILABLE_PACKS = ["demo.json", "A1_Beginner_GigaPack.json"];
+    
+    // --- DATA & STATE MANAGEMENT (DEFINED FIRST) ---
+    const STORAGE_KEY = 'vtrainer_modular_v1';
+    const DEFAULT_STATE = {
+        words: [], customPack: [], 
+        stats: {xp:0, streak:0, totalMastered:0, lastLearningDate: null, sessionsCompleted: 0}, 
+        sm2: {}, settings: {volume:1, ttsRate:1, sessionSize:15, lastLevel: null} 
+    };
+
+    let state = null; // Loaded later
+    let session = {queue:[], currentIndex:0, level:'A1', isActive: false, struggleCount: 0};
+    let isCardFlipped = false;
+    let audioCtx = null;
+    let zenNodes = [];
+    const mainEl = document.getElementById('main-content');
+
+    function updateHeaderStats(){
+        if(!state) return;
+        document.getElementById('streak-display').textContent = state.stats.streak;
+        document.getElementById('xp-display').textContent = state.stats.xp;
+        const totalMastered = state.words.filter(w => w.cycle >= 2).length;
+        document.getElementById('ltm-display').textContent = totalMastered;
+    }
+
+    function saveState(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        updateHeaderStats();
+    }
+
+    function loadState(){
+        try{
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if(!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+            const loaded = JSON.parse(raw);
+            const freshState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            Object.assign(freshState, loaded);
+            if(loaded.stats) Object.assign(freshState.stats, loaded.stats);
+            if(loaded.settings) Object.assign(freshState.settings, loaded.settings);
+            return freshState;
+        }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+    }
+
+    function checkStreakValidity(){
+        if(!state || !state.stats.lastLearningDate) return;
+        const today = new Date().toDateString();
+        const yesterday = new Date(); 
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toDateString();
+        
+        if (state.stats.lastLearningDate !== today && state.stats.lastLearningDate !== yesterdayStr) {
+            state.stats.streak = 0;
+            saveState(); 
+        }
+    }
+
+    function flattenDB(){
+        if(!state) return;
+        let id = 1;
+        state.words = [];
+        const seenKeys = new Set(); 
+        
+        if (state.customPack && Array.isArray(state.customPack) && state.customPack.length > 0) {
+            state.customPack.forEach(entry => {
+                let en, de, ex_en, ex_de, lvl;
+                if(Array.isArray(entry)){
+                    en=entry[0]; de=entry[1]; ex_en=entry[2]; ex_de=entry[3]; lvl="Import";
+                } else {
+                    en=entry.en; de=entry.de; ex_en=entry.ex_en; ex_de=entry.ex_de; lvl=entry.lvl || "Unsorted";
+                }
+                const key = getWordKey(en, de);
+                if(seenKeys.has(key)) return; 
+                seenKeys.add(key);
+                const currId = id++;
+                state.words.push(createWordObject(currId, lvl, en, de, ex_en, ex_de));
+            });
+        } 
+        updateLevelSelect();
+        saveState();
+    }
+
+    function createWordObject(id, lvl, en, de, ex_en, ex_de) {
+        const key = getWordKey(en, de);
+        const sm2Data = state.sm2[key] || {};
+        return {
+            id: id, key: key, lvl: lvl, en: en, de: de, ex_en: ex_en || '', ex_de: ex_de || '',
+            cycle: sm2Data.cycle || 0, perfectCycleCount: sm2Data.perfectCycleCount || 0,
+            ef: (sm2Data.ef) || 2.5, interval: (sm2Data.interval) || 0,
+            repetitions: (sm2Data.repetitions) || 0, dueDate: (sm2Data.dueDate) || Date.now()
+        };
+    }
+
+    function updateLevelSelect(){
+        const select = document.getElementById('level-select');
+        const levels = [...new Set(state.words.map(w => w.lvl))].sort();
+        select.innerHTML = '';
+        if(levels.length === 0){
+            const opt = document.createElement('option'); opt.text = "No Data"; select.add(opt); select.disabled = true;
+        } else {
+            select.disabled = false;
+            levels.forEach(lvl => {
+                const opt = document.createElement('option'); 
+                opt.value = lvl; 
+                // Clean level name (no prefix)
+                opt.text = lvl; 
+                select.add(opt);
+            });
+            if(state.settings.lastLevel && levels.includes(state.settings.lastLevel)) {
+                select.value = state.settings.lastLevel;
+            } else if(levels.length > 0) {
+                select.value = levels[0]; state.settings.lastLevel = levels[0]; saveState();
+            }
+        }
+    }
+
+    // --- 2. HELPER FUNCTIONS ---
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+    function escapeHtml(str=''){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function getWordKey(en, de) { return (String(en||'') + "::" + String(de||'')).toLowerCase().trim(); }
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') audioCtx.resume();
+    }
+    
+    document.addEventListener('click', () => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }, {once:false, passive:true});
+
+    // --- AUDIO LOGIC ---
+    const Sound = {
+        playTone: (freq, type, duration, delay = 0) => {
+            setTimeout(() => {
+                initAudio();
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                    setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch(e){} }, duration * 1000 + 100);
+                } catch(e) { console.warn("Audio Error", e); }
+            }, delay);
+        },
+        feedback: (quality) => {
+            if(quality === 'zen_start') return;
+            switch(quality) {
+                case 0: Sound.playTone(200, 'sawtooth', 0.2); Sound.playTone(150, 'sawtooth', 0.3, 150); break;
+                case 2: Sound.playTone(300, 'square', 0.15); break;
+                case 3: Sound.playTone(440, 'sine', 0.15); break;
+                case 4: Sound.playTone(523, 'sine', 0.1); Sound.playTone(659, 'sine', 0.2, 100); break;
+                case 5: Sound.playTone(523, 'sine', 0.1); Sound.playTone(659, 'sine', 0.1, 80); Sound.playTone(784, 'sine', 0.3, 160); break;
+            }
+        },
+        fanfare: () => { 
+            [523, 659, 784, 1046].forEach((f, i) => Sound.playTone(f, 'sine', 0.3, i * 120)); 
+        },
+        motivate: () => {
+             Sound.playTone(349, 'sine', 0.8, 0);   
+             Sound.playTone(440, 'sine', 0.8, 100); 
+             Sound.playTone(523, 'sine', 0.8, 200); 
+             Sound.playTone(659, 'sine', 1.0, 300); 
+        },
+        startZen: () => {
+            initAudio();
+            const now = audioCtx.currentTime;
+            const masterZenGain = audioCtx.createGain();
+            masterZenGain.connect(audioCtx.destination);
+            masterZenGain.gain.setValueAtTime(0, now);
+            masterZenGain.gain.linearRampToValueAtTime(0.15, now + 3);
+
+            const freqs = [174.61, 220.00, 261.63, 349.23];
+            freqs.forEach((f, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const lfo = audioCtx.createOscillator();
+                const lfoGain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.value = f;
+                lfo.frequency.value = 0.1 + (Math.random() * 0.1); lfoGain.gain.value = 0.3; 
+                lfo.connect(lfoGain); lfoGain.connect(gain.gain);
+                osc.connect(gain); gain.connect(masterZenGain);
+                osc.start(); lfo.start(); gain.gain.value = 0.4;
+                zenNodes.push(osc, gain, lfo, lfoGain);
+            });
+            const chimeInterval = setInterval(() => {
+                if(audioCtx.state === 'closed') return;
+                const chimeFreqs = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                const f = chimeFreqs[Math.floor(Math.random() * chimeFreqs.length)];
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.0);
+                osc.connect(gain); gain.connect(masterZenGain);
+                osc.start(); osc.stop(audioCtx.currentTime + 2.1);
+                setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch(e){} }, 2500);
+            }, 2500);
+            setTimeout(() => { if(audioCtx.state === 'running') masterZenGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1); clearInterval(chimeInterval); }, 29000);
+        },
+        stopZen: () => {
+            if(!audioCtx || zenNodes.length === 0) return;
+            const now = audioCtx.currentTime;
+            const master = zenNodes[zenNodes.length - 1];
+            if(master.gain) {
+                master.gain.cancelScheduledValues(now);
+                master.gain.setValueAtTime(master.gain.value, now);
+                master.gain.linearRampToValueAtTime(0, now + 3); 
+            }
+            setTimeout(() => {
+                zenNodes.forEach(n => { try { if(n.stop) n.stop(); if(n.disconnect) n.disconnect(); } catch(e){} });
+                zenNodes = [];
+            }, 3100);
+        }
+    };
+
+    function playSpeech(text, lang = 'en-US'){
+        if(!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const ut = new SpeechSynthesisUtterance(String(text));
+        ut.lang = lang;
+        ut.rate = 0.9;
+        window.speechSynthesis.speak(ut);
+    }
+
+    const motivations = [
+        { text: "Keep your head up, you got this!", icon: "🐬" },
+        { text: "Take a deep breath...", icon: "🌊" },
+        { text: "Every mistake makes you smarter!", icon: "💡" },
+        { text: "Keep going, you're doing great!", icon: "🌻" },
+        { text: "You'll get the hang of it soon!", icon: "🍀" },
+        { text: "Enjoy a moment of sunshine...", icon: "🌞" },
+        { text: "Great session! Well done!", icon: "⭐" },
+        { text: "Enjoy the break...", icon: "☕" }
+    ];
+
+    function showMotivation(duration = 2500, forcedText = null) {
+        const item = motivations[Math.floor(Math.random() * motivations.length)];
+        const overlay = document.getElementById('motivation-overlay');
+        const content = document.getElementById('motivation-content');
+        
+        document.getElementById('motivation-icon').textContent = item.icon;
+        document.getElementById('motivation-text').textContent = forcedText || item.text;
+        
+        Sound.motivate();
+        
+        overlay.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            overlay.classList.remove('opacity-0');
+            content.classList.remove('scale-90');
+            content.classList.add('scale-100');
+        });
+
+        setTimeout(() => {
+            overlay.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-90');
+            setTimeout(() => overlay.classList.add('hidden'), 500);
+        }, duration);
+    }
+
+    // --- BREAK SELECTION LOGIC ---
+    function showBreakSelection() {
+        const overlay = document.getElementById('break-selection-overlay');
+        overlay.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            overlay.classList.remove('opacity-0');
+        });
+    }
+    
+    window.chooseBreak = function(type) {
+        const overlay = document.getElementById('break-selection-overlay');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            if(type === 'zen') {
+                startZenMode('break', renderSessionSummary);
+            } else if (type === 'game') {
+                // UPDATED: Force UI update to show latest earned gems
+                if(app) app.updateUI();
+                // Show Arcade Integrated Overlay
+                document.getElementById('game-overlay').classList.remove('hidden');
+            }
+        }, 500);
+    };
+
+    // --- DEBUG: Quick Start Arcade ---
+    window.startArcadeDebug = function() {
+        // Close settings modal
+        const modal = document.getElementById('settings-modal');
+        modal.classList.add('opacity-0'); 
+        setTimeout(() => modal.classList.add('hidden'), 300);
+        
+        // Open Arcade directly
+        if(app) app.updateUI();
+        document.getElementById('game-overlay').classList.remove('hidden');
+    };
+
+    window.closeArcade = function() {
+        // Hides game overlay and returns to flow
+        const gameOverlay = document.getElementById('game-overlay');
+        gameOverlay.classList.add('hidden');
+        // Stop any active game logic if needed
+        if(typeof app !== 'undefined' && app.showMenu) {
+            app.showMenu(); // Reset arcade to menu state
+        }
+        renderSessionSummary();
+    };
+
+
+    function startZenMode(type = 'struggle', onComplete = null) {
+        const overlay = document.getElementById('zen-overlay');
+        const bg = document.getElementById('zen-bg');
+        const titleEl = document.getElementById('zen-title');
+        const subEl = document.getElementById('zen-subtitle');
+        
+        bg.classList.remove('animate-zen-bg', 'animate-zen-start-bg');
+
+        let duration = 30000;
+        let bgClass = 'animate-zen-bg';
+
+        if(type === 'start') {
+            duration = 12000; 
+            titleEl.innerHTML = "FIND<br>FOCUS";
+            subEl.innerText = "Prepare yourself...";
+            bgClass = 'animate-zen-start-bg'; 
+        } else if (type === 'break') {
+            titleEl.innerHTML = "TIME TO<br>BREATHE";
+            subEl.innerText = "3 rounds done. Relax...";
+        } else {
+            titleEl.innerHTML = "TIME FOR A<br>SHORT BREAK";
+            subEl.innerText = "Breathe in deeply... and out...";
+        }
+
+        bg.classList.add(bgClass);
+
+        overlay.classList.remove('hidden');
+        Sound.startZen();
+        requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); });
+
+        setTimeout(() => { stopZenMode(onComplete); }, duration);
+    }
+
+    function stopZenMode(onComplete) {
+        const overlay = document.getElementById('zen-overlay');
+        overlay.classList.add('opacity-0');
+        Sound.stopZen();
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            if(onComplete) onComplete();
+        }, 3000);
+    }
+
+    // --- 4. SESSION MANAGEMENT ---
+    function buildSession(level, size){
+        if(state.words.length === 0) {
+            alert("The database is empty. Please import vocabulary via settings first!");
+            return;
+        }
+        const pool = state.words.filter(w => w.lvl === level);
+        if(pool.length === 0) return;
+
+        const now = Date.now();
+        const availableCards = pool.filter(w => {
+            if(w.cycle >= 2) return false; 
+            const isDue = w.dueDate <= now; 
+            const isNew = w.repetitions === 0;
+            return isDue || isNew; 
+        });
+        
+        if (availableCards.length === 0) {
+            const waitingCount = pool.filter(w => w.cycle === 1 && w.dueDate > now).length;
+            renderAllDone(level, waitingCount);
+            session.isActive = false;
+            return;
+        }
+        
+        availableCards.sort((a,b) => {
+            if (a.cycle !== b.cycle) return b.cycle - a.cycle; 
+            return (a.dueDate - b.dueDate) || (a.ef - b.ef);
+        });
+        
+        let selected = availableCards.slice(0, size);
+        selected.sort(() => Math.random() - 0.5);
+        
+        session.queue = selected.map(w => ({ ...w, isEnToDe: Math.random() > 0.5 }));
+        session.currentIndex = 0;
+        session.level = level;
+        session.isActive = true;
+        session.struggleCount = 0;
+        session.ratingCounts = {0:0, 2:0, 3:0, 4:0, 5:0}; 
+        isCardFlipped = false;
+        render();
+    }
+
+    function rateCurrent(quality){
+        if(!session.queue || session.queue.length === 0) return;
+        const card = session.queue[session.currentIndex];
+        const key = card.key;
+        
+        if(!session.ratingCounts) session.ratingCounts = {0:0, 2:0, 3:0, 4:0, 5:0};
+        session.ratingCounts[quality] = (session.ratingCounts[quality] || 0) + 1;
+
+        Sound.feedback(quality);
+        
+        // Use Glow for correct answers
+        if (quality >= 4) {
+            const body = document.getElementById('main-body');
+            body.classList.remove('glow-active');
+            void body.offsetWidth; // Force reflow
+            body.classList.add('glow-active');
+            
+            // Auto remove after animation
+            setTimeout(() => {
+                body.classList.remove('glow-active');
+            }, 2000);
+        }
+        
+        // Struggle Logic
+        if(quality < 3) { 
+            const step = (quality === 0) ? 2 : 1; 
+            const prevCount = session.struggleCount || 0;
+            session.struggleCount = prevCount + step;
+
+            if(session.struggleCount >= 20) {
+                 setTimeout(() => { startZenMode('struggle'); session.struggleCount = 0; }, 800);
+            } else if(session.struggleCount >= 14 && prevCount < 14) {
+                 setTimeout(() => showMotivation(10000), 400);
+            } else if(session.struggleCount >= 6 && prevCount < 6) {
+                 setTimeout(() => showMotivation(5000), 400);
+            }
+        } else {
+            session.struggleCount = 0;
+        }
+
+        // --- RESTORED STRICTER LOGIC (v5.0) ---
+        let c = state.sm2[key] || {ef:2.5, interval:0, repetitions:0, dueDate:Date.now(), cycle:0, perfectCycleCount:0};
+        
+        if (quality === 5) c.perfectCycleCount = (c.perfectCycleCount || 0) + 1;
+        else if (quality < 3) c.perfectCycleCount = 0; 
+        
+        // Promotion to Cycle 1 requires 3x Perfect
+        if ((c.cycle || 0) === 0 && c.perfectCycleCount >= 3) {
+            c.cycle = 1; 
+            c.perfectCycleCount = 0; 
+            c.interval = 10; 
+            c.dueDate = Date.now() + (10 * 24 * 60 * 60 * 1000); 
+            c.repetitions = 3; 
+        } 
+        // Promotion to Cycle 2 (Mastered) requires 3x Perfect
+        else if ((c.cycle || 0) === 1 && c.perfectCycleCount >= 3) {
+            c.cycle = 2; 
+            c.perfectCycleCount = 0; 
+            c.interval = 36500; 
+            c.dueDate = Date.now() + (c.interval * 24 * 60 * 60 * 1000);
+        } 
+        // Standard SM2
+        else {
+            const q = clamp(quality, 0, 5);
+            if(q < 3){ c.repetitions = 0; c.interval = 1; }
+            else {
+                c.repetitions += 1;
+                if(c.repetitions === 1) c.interval = 1;
+                else if(c.repetitions === 2) c.interval = 6;
+                else c.interval = Math.round(c.interval * c.ef);
+            }
+            c.ef = Math.max(1.3, c.ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
+            c.dueDate = Date.now() + c.interval * 24*60*60*1000;
+        }
+        
+        state.sm2[key] = c;
+        saveState();
+        
+        const wIdx = state.words.findIndex(w => w.key === key);
+        if(wIdx >= 0) state.words[wIdx] = createWordObject(card.id, card.lvl, card.en, card.de, card.ex_en, card.ex_de);
+
+        if(quality >= 4) {
+            state.stats.xp += Math.max(1, quality);
+            // No confetti here anymore
+            
+            const today = new Date().toDateString();
+            if(state.stats.lastLearningDate !== today){
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                state.stats.streak = (state.stats.lastLearningDate === yesterday.toDateString()) ? state.stats.streak + 1 : 1;
+                state.stats.lastLearningDate = today;
+            }
+        } 
+        
+        // Single Pass: Always remove card from current session
+        session.queue.splice(session.currentIndex, 1);
+        saveState();
+
+        if(session.queue.length === 0){
+            session.isActive = false;
+            state.stats.sessionsCompleted = (state.stats.sessionsCompleted || 0) + 1;
+            saveState();
+
+            if(state.stats.sessionsCompleted % 3 === 0) {
+                // CHANGED: Show Break Selection
+                showBreakSelection();
+            } else {
+                renderSessionSummary();
+            }
+        } else {
+            session.currentIndex = clamp(session.currentIndex, 0, session.queue.length - 1);
+            isCardFlipped = false;
+            render();
+        }
+    }
+
+    // --- 5. RENDER FUNCTIONS ---
+    function renderEmptyState(){
+        mainEl.innerHTML = `
+            <div class="flex-grow flex flex-col items-center justify-center text-center animate-pop">
+                <div class="w-32 h-32 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                    <i data-lucide="upload-cloud" class="w-16 h-16 text-slate-400"></i>
+                </div>
+                <h1 class="text-2xl font-black text-slate-700 mb-2">Database Empty</h1>
+                <p class="text-slate-500 mb-8 font-medium px-6">
+                    Please import a vocabulary pack via settings to start.
+                </p>
+                <button onclick="document.getElementById('btn-settings-toggle').click()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition btn-press">
+                    Open Settings
+                </button>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
+    function renderStartScreen(){
+        if(state.words.length === 0) { renderEmptyState(); return; }
+        
+        mainEl.innerHTML = `
+            <div class="flex-grow flex flex-col items-center justify-center text-center animate-pop">
+                <div class="w-32 h-32 bg-white rounded-full shadow-2xl flex items-center justify-center mb-6 relative">
+                    <div class="absolute inset-0 bg-blue-100 rounded-full opacity-50 animate-pulse"></div>
+                    <i data-lucide="play-circle" class="w-16 h-16 text-blue-500 relative z-10"></i>
+                </div>
+                <h1 class="text-3xl font-black text-slate-700 mb-2">Learning Session</h1>
+                <p class="text-slate-500 mb-8 font-medium">Ready for the next round?</p>
+                
+                <button onclick="startDefaultSession()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-extrabold text-lg py-5 rounded-2xl border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition btn-press shadow-xl flex items-center justify-center gap-2 glow-active">
+                    START
+                </button>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
+    function renderSessionSummary(){
+        Sound.fanfare();
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        
+        const count = state.stats.sessionsCompleted || 0;
+        const counts = session.ratingCounts || {0:0, 2:0, 3:0, 4:0, 5:0};
+
+        mainEl.innerHTML = `
+            <div class="flex-grow flex flex-col items-center justify-center text-center animate-pop">
+                <div class="w-32 h-32 bg-yellow-100 rounded-full flex items-center justify-center mb-4 shadow-xl glow-active">
+                    <i data-lucide="trophy" class="w-16 h-16 text-yellow-500 animate-bounce"></i>
+                </div>
+                <h1 class="text-2xl font-black text-slate-700 mb-1">Round ${count} complete!</h1>
+                
+                <div class="grid grid-cols-5 gap-2 w-full max-w-xs mb-6 px-1">
+                    <div class="flex flex-col items-center p-2 bg-rose-50 rounded-lg border border-rose-100 shadow-sm"><i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-400 mb-1"></i><span class="font-black text-rose-600">${counts[0]}</span></div>
+                    <div class="flex flex-col items-center p-2 bg-orange-50 rounded-lg border border-orange-100 shadow-sm"><span class="text-xs font-bold text-orange-400 mb-1">2</span><span class="font-black text-orange-600">${counts[2]}</span></div>
+                    <div class="flex flex-col items-center p-2 bg-yellow-50 rounded-lg border border-yellow-100 shadow-sm"><span class="text-xs font-bold text-yellow-400 mb-1">3</span><span class="font-black text-yellow-600">${counts[3]}</span></div>
+                    <div class="flex flex-col items-center p-2 bg-blue-50 rounded-lg border border-blue-100 shadow-sm"><span class="text-xs font-bold text-blue-400 mb-1">4</span><span class="font-black text-blue-600">${counts[4]}</span></div>
+                    <div class="flex flex-col items-center p-2 bg-green-50 rounded-lg border border-green-100 shadow-sm"><i data-lucide="check" class="w-4 h-4 text-green-500 mb-1"></i><span class="font-black text-green-700">${counts[5]}</span></div>
+                </div>
+                
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 w-full max-w-xs">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-slate-400 font-bold text-xs">TOTAL XP</span>
+                        <span class="text-yellow-500 font-black">${state.stats.xp}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 font-bold text-xs">STREAK</span>
+                        <span class="text-orange-500 font-black">${state.stats.streak} Days</span>
+                    </div>
+                </div>
+
+                <button onclick="startDefaultSession(true)" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-extrabold text-lg py-5 rounded-2xl border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition btn-press shadow-xl flex items-center justify-center gap-2">
+                    NEXT ROUND
+                </button>
+                <button onclick="goToMenu()" class="mt-4 text-slate-400 font-bold text-sm hover:text-slate-600 transition">Menu</button>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
+    function renderAllDone(level, waiting){
+        let nextBtn = '';
+        const levels = [...new Set(state.words.map(w => w.lvl))].sort();
+        const currentIdx = levels.indexOf(level);
+        const nextLevel = (currentIdx !== -1 && currentIdx < levels.length - 1) ? levels[currentIdx+1] : null;
+
+        if(nextLevel){
+            nextBtn = `<button onclick="changeLevel('${nextLevel}')" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg mb-3">Continue with ${nextLevel}</button>`;
+        }
+
+        mainEl.innerHTML = `
+            <div class="flex-grow flex flex-col items-center justify-center text-center animate-pop">
+                <div class="w-32 h-32 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                    <i data-lucide="check-circle" class="w-16 h-16 text-green-500"></i>
+                </div>
+                <h1 class="text-3xl font-black text-slate-700 mb-2">All done!</h1>
+                <p class="text-slate-500 mb-6 font-medium px-4">
+                    No cards due in <strong>${level}</strong>.<br>
+                    ${waiting > 0 ? `<div class="mt-2 text-xs bg-orange-50 text-orange-600 px-3 py-2 rounded-lg border border-orange-100">⏸️ ${waiting} cards paused for 10 days.</div>` : ''}
+                </p>
+                <div class="w-full max-w-xs">
+                    ${nextBtn}
+                    <button onclick="goToMenu()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-6 rounded-xl transition">Menu</button>
+                </div>
+            </div>`;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
+    function render(){
+        if(!session.isActive) { renderStartScreen(); return; }
+
+        const card = session.queue[session.currentIndex];
+        const isEnStart = card.isEnToDe;
+        const frontText = isEnStart ? card.en : card.de;
+        const backText = isEnStart ? card.de : card.en;
+        const frontSub = isEnStart ? card.ex_en : card.ex_de;
+        const backSub = isEnStart ? card.ex_de : card.ex_en;
+        const lang1 = isEnStart ? 'ENGLISH' : 'GERMAN';
+        const lang2 = isEnStart ? 'GERMAN' : 'ENGLISH';
+        const lc1 = isEnStart ? 'en-US' : 'de-DE';
+        const lc2 = isEnStart ? 'de-DE' : 'en-US';
+
+        const lvlWords = state.words.filter(w => w.lvl === session.level);
+        const total = lvlWords.length;
+        const mastered = lvlWords.filter(w => w.cycle >= 2).length;
+        const waiting = lvlWords.filter(w => w.cycle === 1).length;
+        const pct = total === 0 ? 0 : Math.round(((mastered + waiting*0.5) / total) * 100);
+
+        const perfectCount = card.perfectCycleCount || 0;
+        let progressDots = '';
+        if(card.cycle < 2) {
+            progressDots = '<div class="flex gap-1 mt-2 justify-center opacity-70">';
+            for(let i=0; i<3; i++){
+                let colorClass = i < perfectCount ? 'bg-green-500' : 'bg-slate-200';
+                progressDots += `<div class="w-2 h-2 rounded-full ${colorClass}"></div>`;
+            }
+            progressDots += '</div>';
+        }
+
+        const isShortLevel = card.lvl && card.lvl.length <= 3;
+
+        mainEl.innerHTML = `
+            <div class="mb-2 px-2">
+                <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                    <span>${session.level} Progress</span>
+                    <span>${pct}%</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div class="bg-green-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: ${pct}%"></div>
+                </div>
+            </div>
+            <div class="mb-4 flex justify-end text-xs font-bold text-slate-400 px-2">
+                <span>${session.queue.length} left</span>
+            </div>
+
+            <div class="flex-grow flex flex-col justify-center relative perspective-1000 mb-6">
+                <div onclick="toggleFlip()" class="w-full aspect-[4/5] sm:aspect-[4/3] relative preserve-3d cursor-pointer card-inner ${isCardFlipped ? 'is-flipped' : ''} group">
+                    <div class="absolute inset-0 bg-white rounded-3xl shadow-xl border-2 border-slate-100 flex flex-col items-center justify-center p-6 backface-hidden group-active:scale-[0.98] transition-all glow-active">
+                        <div class="w-full flex justify-between items-start mb-2 absolute top-6 left-0 px-6">
+                            <span class="text-xs font-extrabold text-slate-300 tracking-widest uppercase">${lang1}</span>
+                            <button onclick="event.stopPropagation(); playSpeech('${escapeHtml(frontText)}', '${lc1}')" class="p-2 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 rounded-full transition">
+                                <i data-lucide="volume-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- SMART LEVEL DISPLAY -->
+                        ${card.lvl ? `<div class="text-purple-300 font-extrabold text-lg mb-1 tracking-wider ${isShortLevel ? 'uppercase' : ''} drop-shadow-sm">${card.lvl}</div>` : ''}
+
+                        <h2 class="text-4xl font-black text-slate-700 text-center break-words drop-shadow-sm mb-4">${escapeHtml(frontText)}</h2>
+                        ${frontSub ? `<div class="mt-4 px-4 py-2 bg-slate-50 text-slate-500 rounded-xl text-sm font-medium italic border border-slate-100 text-center max-w-full">"${escapeHtml(frontSub)}"</div>` : ''}
+                        <div class="absolute bottom-6 text-slate-300 text-xs font-bold flex flex-col items-center gap-1">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i><span>Tap to flip</span>
+                        </div>
+                    </div>
+                    <div class="absolute inset-0 bg-white rounded-3xl shadow-xl border-2 border-blue-100 rotate-y-180 backface-hidden flex flex-col items-center justify-center p-6 overflow-hidden glow-active">
+                        <div class="w-full flex justify-between items-start mb-2 absolute top-6 left-0 px-6">
+                             <span class="text-xs font-extrabold text-blue-200 tracking-widest uppercase">${lang2}</span>
+                             <button onclick="event.stopPropagation(); playSpeech('${escapeHtml(backText)}', '${lc2}')" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-400 hover:text-blue-600 rounded-full transition">
+                                <i data-lucide="volume-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <h2 class="text-3xl font-black text-blue-600 text-center break-words drop-shadow-sm mb-4">${escapeHtml(backText)}</h2>
+                        ${backSub ? `<div class="mt-2 px-4 py-2 bg-blue-50 text-blue-600/70 rounded-xl text-sm font-medium italic border border-blue-100 text-center">"${escapeHtml(backSub)}"</div>` : ''}
+                        
+                        ${progressDots}
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-20 w-full">
+                ${!isCardFlipped ? `
+                    <div onclick="toggleFlip()" class="w-full h-full bg-slate-100 rounded-2xl overflow-hidden relative cursor-pointer group shadow-inner">
+                        <div class="absolute inset-0 flex items-center justify-center z-10">
+                            <span class="font-bold text-slate-400 group-hover:text-green-600 transition">Focus time...</span>
+                        </div>
+                        <div class="h-full bg-green-100 animate-timer absolute left-0 top-0"></div>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-5 gap-2 h-full">
+                        <button onclick="rateCurrent(0)" class="col-span-1 bg-rose-500 hover:bg-rose-600 text-white rounded-xl border-b-4 border-rose-700 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><i data-lucide="rotate-ccw" class="w-5 h-5 mb-1"></i><span class="text-[10px] font-bold">Again</span></button>
+                        <button onclick="rateCurrent(2)" class="col-span-1 bg-orange-400 hover:bg-orange-500 text-white rounded-xl border-b-4 border-orange-600 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><span class="text-xs font-black">2</span><span class="text-[10px] font-bold">Hard</span></button>
+                        <button onclick="rateCurrent(3)" class="col-span-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><span class="text-xs font-black">3</span><span class="text-[10px] font-bold">Ok</span></button>
+                        <button onclick="rateCurrent(4)" class="col-span-1 bg-blue-400 hover:bg-blue-500 text-white rounded-xl border-b-4 border-blue-600 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><span class="text-xs font-black">4</span><span class="text-[10px] font-bold">Good</span></button>
+                        <button onclick="rateCurrent(5)" class="col-span-1 bg-green-500 hover:bg-green-600 text-white rounded-xl border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><i data-lucide="check" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-bold">Perfekt</span></button>
+                    </div>
+                `}
+            </div>
+        `;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
+    // --- 6. EXPORTS & EVENTS ---
+    window.toggleFlip = function(){ isCardFlipped = !isCardFlipped; render(); };
+    window.startDefaultSession = function(skipIntro = false){
+        const select = document.getElementById('level-select');
+        state.settings.lastLevel = select.value;
+        saveState();
+        
+        const launch = () => {
+             const size = Number(document.getElementById('session-size').value) || 15;
+             buildSession(select.value, size);
+        };
+
+        if(skipIntro) {
+            launch();
+        } else {
+            startZenMode('start', launch);
+        }
+    };
+
+    window.changeLevel = function(lvl){
+        const select = document.getElementById('level-select');
+        select.value = lvl;
+        state.settings.lastLevel = lvl;
+        saveState();
+        buildSession(lvl, Number(document.getElementById('session-size').value));
+    };
+
+    // --- 7. NEW SOFT RESET / MENU LOGIC ---
+    function softReset() {
+        // Clear data but keep structure
+        state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        session = {queue:[], currentIndex:0, level:'A1', isActive: false, struggleCount: 0};
+        
+        // Save empty state
+        saveState();
+        updateHeaderStats();
+        
+        // Update UI
+        updateLevelSelect(); // Will show "No Data"
+        renderEmptyState();
+        
+        // Close modal if open
+        const modal = document.getElementById('settings-modal');
+        modal.classList.add('opacity-0'); 
+        setTimeout(()=>modal.classList.add('hidden'),300);
+    }
+
+    function goToMenu() {
+        session.isActive = false;
+        if(state.words.length > 0) {
+            renderStartScreen();
+        } else {
+            renderEmptyState();
+        }
+    }
+    
+    // Attach to window for onclick access
+    window.softReset = softReset;
+    window.goToMenu = goToMenu;
+
+    // UI Wire-up
+    const modal = document.getElementById('settings-modal');
+    document.getElementById('btn-settings-toggle').onclick = () => { 
+        renderServerPackButtons();
+        modal.classList.remove('hidden'); 
+        setTimeout(()=>modal.classList.remove('opacity-0'),10); 
+    };
+    document.getElementById('btn-close-settings').onclick = () => { modal.classList.add('opacity-0'); setTimeout(()=>modal.classList.add('hidden'),300); };
+    
+    document.getElementById('level-select').onchange = (e) => {
+        state.settings.lastLevel = e.target.value;
+        saveState();
+    };
+
+    document.getElementById('btn-export').onclick = () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='vtrainer-backup.json'; a.click();
+    };
+    
+    // --- ROBUST IMPORT HANDLER ---
+    document.getElementById('btn-import').onclick = () => {
+        const input = document.createElement('input'); input.type='file'; input.accept='application/json';
+        input.onchange = (e) => {
+            const f = e.target.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = () => {
+                try {
+                    const p = JSON.parse(r.result);
+                    processImport(p); // Use extracted logic
+                } catch(err){ 
+                    console.error(err);
+                    alert('Import Error! File corrupted?'); 
+                }
+            };
+            r.readAsText(f);
+        };
+        input.click();
+    };
+
+    // Updated Reset Button with Soft Reset
+    document.getElementById('btn-reset-app').onclick = () => {
+        if(confirm('Delete everything?')) { 
+            localStorage.removeItem(STORAGE_KEY);
+            softReset();
+        }
+    };
+
+    // Reusable Import Logic
+    function processImport(p) {
+        if(p.words && Array.isArray(p.words)) {
+            if(confirm('Overwrite current database with this pack?')) {
+                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                
+                state.words = p.words;
+                state.customPack = p.words.map(w => ({
+                    en: w.en, de: w.de, ex_en: w.ex_en, ex_de: w.ex_de, lvl: w.lvl
+                }));
+
+                if(p.stats) Object.assign(state.stats, p.stats);
+                if(p.settings) Object.assign(state.settings, p.settings);
+
+                state.sm2 = {};
+                p.words.forEach(w => {
+                    const key = getWordKey(w.en, w.de);
+                    state.sm2[key] = {
+                        cycle: w.cycle || 0,
+                        perfectCycleCount: w.perfectCycleCount || 0,
+                        ef: w.ef || 2.5,
+                        interval: w.interval || 0,
+                        repetitions: w.repetitions || 0,
+                        dueDate: w.dueDate || Date.now()
+                    };
+                });
+                finishImport(p.words.length);
+            }
+        } else if (Array.isArray(p)) {
+            state.customPack = (state.customPack||[]).concat(p);
+            finishImport(p.length);
+        } else {
+            alert('Unknown file format.');
+        }
+    }
+
+    function finishImport(count) {
+        alert(count + ' words imported!');
+        flattenDB(); 
+        saveState(); 
+        render();
+        // Close modal
+        const modal = document.getElementById('settings-modal');
+        modal.classList.add('opacity-0'); 
+        setTimeout(()=>modal.classList.add('hidden'),300);
+    }
+
+    // --- DYNAMIC PACK LIST (List.json logic) ---
+    function renderServerPackButtons() {
+        const listContainer = document.getElementById('server-packs-list');
+        listContainer.innerHTML = `<div class="text-xs text-slate-400 italic text-center p-2 mb-2"><span class="animate-pulse">Loading list.json...</span></div>`;
+        
+        // Fetch 'liste.json' from 'vokabelpakete/' folder
+        fetch(PACKS_DIR + LIST_FILE)
+            .then(response => {
+                // If fetch fails (e.g. in preview), fall back to hardcoded list
+                if(!response.ok) throw new Error("List not found");
+                return response.json();
+            })
+            .then(fileList => {
+                 populatePackList(fileList, listContainer);
+            })
+            .catch(err => {
+                console.warn("Fetch failed, using fallback list.", err);
+                // Fallback to hardcoded AVAILABLE_PACKS
+                populatePackList(AVAILABLE_PACKS, listContainer);
+            });
+    }
+
+    function populatePackList(fileList, container) {
+        container.innerHTML = '';
+        
+        if(!Array.isArray(fileList) || fileList.length === 0) {
+             container.innerHTML = `<div class="text-xs text-slate-400 italic text-center p-2 mb-2">No packs found in list.json</div>`;
+             return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = "relative";
+
+        const select = document.createElement('select');
+        select.className = "w-full bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-xl px-3 py-3 appearance-none focus:outline-none focus:border-blue-500 transition mb-2";
+        select.id = "dynamic-pack-select";
+        
+        const defaultOpt = document.createElement('option');
+        defaultOpt.text = "Select a pack...";
+        defaultOpt.disabled = true;
+        defaultOpt.selected = true;
+        select.add(defaultOpt);
+
+        fileList.forEach(filename => {
+            const opt = document.createElement('option');
+            opt.value = filename;
+            opt.text = filename;
+            select.add(opt);
+        });
+
+        const chevron = document.createElement('i');
+        chevron.setAttribute('data-lucide', 'chevron-down');
+        chevron.className = "absolute right-3 top-4 w-4 h-4 text-slate-400 pointer-events-none";
+
+        const btn = document.createElement('button');
+        btn.className = "w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2";
+        btn.innerHTML = `<span>Load Selected Pack</span> <i data-lucide="download-cloud" class="w-4 h-4"></i>`;
+        
+        btn.onclick = () => {
+            const selectedFile = select.value;
+            if(selectedFile && selectedFile !== "Select a pack...") {
+                loadPackFromServer(selectedFile, btn);
+            } else {
+                alert("Please select a pack first.");
+            }
+        };
+
+        wrapper.appendChild(select);
+        wrapper.appendChild(chevron);
+        container.appendChild(wrapper);
+        container.appendChild(btn);
+        
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function loadPackFromServer(filename, btnElement) {
+        const url = PACKS_DIR + filename;
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = `<span class="animate-pulse">Loading...</span>`;
+        btnElement.disabled = true;
+
+        fetch(url)
+            .then(response => {
+                if(!response.ok) throw new Error("File not found");
+                return response.json();
+            })
+            .then(data => {
+                processImport(data);
+                btnElement.innerHTML = originalText;
+                btnElement.disabled = false;
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Could not load pack: " + filename + "\nCheck if file exists in 'vokabelpakete/' folder.");
+                btnElement.innerHTML = `<span class="text-red-200">Error</span>`;
+                setTimeout(() => {
+                    btnElement.innerHTML = originalText;
+                    btnElement.disabled = false;
+                }, 2000);
+            });
+    }
+    
+    // --- ARCADE GAME LOGIC (IMPORTED AS-IS) ---
+    /**
+     * Main App Control (Economy, Navigation)
+     */
+    class ArcadeApp {
+        constructor() {
+            // REMOVED: this.gems = 1000; -> Now using state.stats.xp directly!
+            this.currentGame = null;
+            this.timer = null;
+            this.timeLeft = 60;
+            this.gameActive = false;
+            this.costPerGame = 15;
+            this.continueCost = 15;
+
+            // GLOBAL TIME LIMIT LOGIC
+            this.totalPlayTime = 0; // Seconds
+            this.maxPlayTime = 600; // 10 Minutes
+            this.extensionPurchased = false; 
+
+            // DOM Elements
+            this.ui = {
+                gems: document.getElementById('gem-count'),
+                menu: document.getElementById('menu-screen'),
+                gameContainer: document.getElementById('game-container'),
+                canvas: document.getElementById('gameCanvas'),
+                memoryBoard: document.getElementById('memoryBoard'),
+                controls: document.getElementById('controls'),
+                overlay: document.getElementById('overlay-screen'),
+                timerDisplay: document.getElementById('timer-display'),
+                timeLeft: document.getElementById('time-left'),
+                actionBtn: document.getElementById('btn-action'),
+                sentenceDisplay: document.getElementById('game-sentence-display'),
+                btnContinue: document.getElementById('btn-continue'),
+                limitOverlay: document.getElementById('limit-overlay'),
+                unlockBtn: document.getElementById('btn-unlock-limit'),
+                warningText: document.getElementById('playtime-warning')
+            };
+
+            this.updateUI();
+            this.updatePlaytimeWarning(); 
+            
+            // Keyboard Listener Global
+            document.addEventListener('keydown', (e) => {
+                if(this.gameActive && this.currentGame) {
+                    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                        e.preventDefault();
+                    }
+                    this.currentGame.handleInput(e.key);
+                }
+            });
+        }
+
+        // Helper to get current global gems
+        get gems() {
+            return state ? state.stats.xp : 0;
+        }
+
+        // Helper to modify global gems
+        modifyGems(amount) {
+            if(!state) return;
+            state.stats.xp += amount;
+            saveState();        // Save to localStorage
+            updateHeaderStats(); // Update the main app header (outside arcade)
+            this.updateUI();    // Update the arcade UI
+        }
+
+        updateUI() {
+            // Use global gems
+            this.ui.gems.innerText = this.gems;
+            
+            const btns = document.querySelectorAll('.game-btn');
+            btns.forEach(btn => {
+                if(this.gems < this.costPerGame) {
+                    btn.classList.add('opacity-50', 'pointer-events-none', 'grayscale');
+                } else {
+                    btn.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
+                }
+            });
+
+            if(this.gems < this.continueCost) {
+                this.ui.btnContinue.classList.add('opacity-50', 'pointer-events-none');
+                this.ui.btnContinue.innerText = "Not enough Gems";
+            } else {
+                this.ui.btnContinue.classList.remove('opacity-50', 'pointer-events-none');
+                this.ui.btnContinue.innerText = `Continue (+30s) for ${this.continueCost} 💎`;
+            }
+
+            if (this.extensionPurchased) {
+                this.ui.unlockBtn.innerText = "Already Unlocked";
+                this.ui.unlockBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else if (this.gems < 500) {
+                this.ui.unlockBtn.innerText = "Not enough Gems (need 500)";
+                this.ui.unlockBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                this.ui.unlockBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        // Global Limit Logic
+        checkGlobalLimit() {
+            this.totalPlayTime++;
+            this.updatePlaytimeWarning();
+            
+            const currentCap = this.extensionPurchased ? 1200 : 600;
+
+            if (this.totalPlayTime >= currentCap) {
+                this.enforcePlayLimit();
+                return true; // SIGNAL: Limit reached!
+            }
+            return false; // All good
+        }
+
+        updatePlaytimeWarning() {
+            const opacityRatio = Math.min(this.totalPlayTime / 600, 1);
+            const alpha = opacityRatio.toFixed(2);
+            
+            this.ui.warningText.style.color = `rgba(220, 38, 38, ${alpha})`;
+            
+            if (opacityRatio > 0.1) {
+                this.ui.warningText.style.textShadow = `0 0 10px rgba(220, 38, 38, ${alpha * 0.5}), 0 0 20px rgba(220, 38, 38, ${alpha * 0.3})`;
+            } else {
+                this.ui.warningText.style.textShadow = 'none';
+            }
+
+            const mins = Math.floor(this.totalPlayTime / 60);
+            const secs = this.totalPlayTime % 60;
+            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+            
+            const text = `already ${timeStr} break`;
+            
+            if (this.totalPlayTime > 0) {
+                this.ui.warningText.innerText = text;
+            } else {
+                this.ui.warningText.innerText = ""; 
+            }
+        }
+
+        enforcePlayLimit() {
+            this.gameActive = false;
+            clearInterval(this.timer);
+            if (this.currentGame && this.currentGame.pause) {
+                this.currentGame.pause();
+            }
+            
+            this.ui.limitOverlay.classList.remove('hidden'); 
+            
+            setTimeout(() => {
+                this.ui.limitOverlay.classList.add('active');
+            }, 20);
+        }
+
+        unlockExtension() {
+            if (this.gems >= 500 && !this.extensionPurchased) {
+                this.modifyGems(-500); // Use helper to deduct
+                this.extensionPurchased = true;
+                
+                this.ui.limitOverlay.classList.remove('active');
+                
+                setTimeout(() => {
+                    this.ui.limitOverlay.classList.add('hidden');
+                    this.updateUI();
+                    
+                    // RESUME GAME LOGIC
+                    this.gameActive = true;
+                    this.startTimer();
+                    if (this.currentGame && this.currentGame.resume) {
+                        this.currentGame.resume();
+                    }
+                }, 500);
+            }
+        }
+
+        startGame(type) {
+            const currentCap = this.extensionPurchased ? 1200 : 600;
+            if (this.totalPlayTime >= currentCap) {
+                this.enforcePlayLimit();
+                return;
+            }
+
+            if (this.currentGame && this.currentGame.destroy) {
+                this.currentGame.destroy();
+            }
+
+            if (this.gems < this.costPerGame) return;
+
+            this.modifyGems(-this.costPerGame); // Deduct cost from global state
+
+            this.ui.menu.classList.add('hidden');
+            this.ui.gameContainer.classList.remove('hidden');
+            this.ui.timerDisplay.classList.remove('hidden');
+            this.ui.overlay.classList.add('hidden');
+            
+            this.ui.canvas.classList.add('hidden');
+            this.ui.memoryBoard.classList.add('hidden');
+            this.ui.controls.classList.add('hidden');
+            this.ui.actionBtn.classList.add('hidden');
+            this.ui.sentenceDisplay.classList.add('hidden'); 
+
+            this.timeLeft = 60; 
+            this.ui.timeLeft.innerText = this.timeLeft;
+            this.gameActive = true;
+
+            if (type === 'snake') {
+                this.ui.canvas.classList.remove('hidden');
+                this.ui.controls.classList.remove('hidden');
+                this.ui.sentenceDisplay.classList.remove('hidden');
+                this.ui.sentenceDisplay.style.display = 'flex'; 
+                this.currentGame = new SnakeGame(this.ui.canvas, this.ui.sentenceDisplay, () => this.endGame('GameOver'), () => this.endGame('LevelWin'));
+            } else if (type === 'tetris') {
+                this.ui.canvas.classList.remove('hidden');
+                this.ui.controls.classList.remove('hidden');
+                this.ui.actionBtn.classList.remove('hidden');
+                this.ui.sentenceDisplay.classList.remove('hidden');
+                this.ui.sentenceDisplay.style.display = 'flex';
+                this.currentGame = new TetrisGame(this.ui.canvas, this.ui.sentenceDisplay, () => this.endGame('GameOver'), () => this.endGame('LevelWin'));
+            } else if (type === 'memory') {
+                this.ui.memoryBoard.classList.remove('hidden');
+                this.currentGame = new MemoryGame(this.ui.memoryBoard, () => this.endGame('Win'));
+            }
+
+            this.startTimer();
+        }
+
+        startTimer() {
+            if (this.timer) clearInterval(this.timer);
+            this.timer = setInterval(() => {
+                if(!this.gameActive) return;
+                
+                if(this.checkGlobalLimit()) {
+                    return; 
+                }
+                
+                this.timeLeft--;
+                this.ui.timeLeft.innerText = this.timeLeft;
+                
+                if(this.timeLeft <= 0) {
+                    this.endGame('TimeOut');
+                }
+            }, 1000);
+        }
+
+        continueGame() {
+            if (this.gems >= this.continueCost) {
+                const currentCap = this.extensionPurchased ? 1200 : 600;
+                if (this.totalPlayTime >= currentCap) {
+                    this.enforcePlayLimit();
+                    return;
+                }
+
+                this.modifyGems(-this.continueCost); // Deduct
+                
+                this.timeLeft = 30; 
+                this.ui.timeLeft.innerText = this.timeLeft;
+                this.gameActive = true;
+                this.ui.overlay.classList.add('hidden');
+                
+                this.startTimer();
+                
+                if (this.currentGame && this.currentGame.resume) {
+                    this.currentGame.resume();
+                }
+            }
+        }
+
+        handleInput(key) {
+            if(this.currentGame && this.gameActive) {
+                this.currentGame.handleInput(key);
+            }
+        }
+
+        endGame(reason) {
+            this.gameActive = false;
+            clearInterval(this.timer);
+            if (this.currentGame) this.currentGame.pause();
+
+            const title = document.getElementById('overlay-title');
+            const msg = document.getElementById('overlay-msg');
+            const icon = document.getElementById('overlay-icon');
+
+            this.ui.btnContinue.classList.add('hidden');
+
+            if (reason === 'TimeOut') {
+                icon.innerText = "⏰";
+                title.innerText = "Time's up!";
+                msg.innerText = "Want to continue playing?";
+                this.ui.btnContinue.classList.remove('hidden');
+            } else if (reason === 'GameOver') {
+                icon.innerText = "💥";
+                title.innerText = "Game Over";
+                msg.innerText = "Too bad. Try again!";
+            } else if (reason === 'Win') {
+                icon.innerText = "🎉";
+                title.innerText = "You Won!";
+                msg.innerText = "All pairs found!";
+            } else if (reason === 'LevelWin') {
+                this.modifyGems(30); // Add Bonus to global
+                icon.innerText = "🏆";
+                title.innerText = "Sentence Complete!";
+                msg.innerText = "+30 Gems Bonus!";
+            }
+
+            this.ui.overlay.classList.remove('hidden');
+        }
+
+        restartGame() {
+            if (this.currentGame && this.currentGame.destroy) {
+                this.currentGame.destroy();
+            }
+
+            if (this.gems >= this.costPerGame && this.currentGame) {
+                const type = this.currentGame.type;
+                this.startGame(type);
+            } else if (this.gems >= this.costPerGame && !this.currentGame) {
+                this.showMenu();
+            } else {
+                this.showMenu();
+            }
+        }
+
+        showMenu() {
+            this.gameActive = false;
+            clearInterval(this.timer);
+            if (this.currentGame && this.currentGame.destroy) {
+                this.currentGame.destroy();
+            }
+            this.currentGame = null;
+
+            this.ui.overlay.classList.add('hidden');
+            this.ui.gameContainer.classList.add('hidden');
+            this.ui.timerDisplay.classList.add('hidden');
+            this.ui.menu.classList.remove('hidden');
+            this.ui.sentenceDisplay.style.display = 'none'; 
+        }
+    }
+
+    // Snake Game
+    class SnakeGame {
+        constructor(canvas, sentenceDisplay, onGameOver, onWin) {
+            this.type = 'snake';
+            this.canvas = canvas;
+            this.sentenceDisplay = sentenceDisplay;
+            this.ctx = canvas.getContext('2d');
+            this.onGameOver = onGameOver;
+            this.onWin = onWin;
+            this.grid = 20;
+            this.snake = [{x: 160, y: 160}, {x: 140, y: 160}, {x: 120, y: 160}];
+            this.dx = this.grid;
+            this.dy = 0;
+            this.score = 0;
+            this.changingDirection = false;
+            this.loopId = null;
+            this.speed = 100;
+            this.lastEatenIndex = -1; 
+
+            const sentences = [
+                "The cat sleeps",
+                "I love coding",
+                "Hello world",
+                "Learn new words",
+                "Keep going on",
+                "Sun is shining",
+                "Read a book",
+                "Time to play"
+            ];
+            this.fullSentence = sentences[Math.floor(Math.random() * sentences.length)];
+            this.targetChars = this.fullSentence.split('');
+            this.charIndex = 0; 
+
+            this.findNextTarget();
+            this.renderSentence();
+            this.food = this.getFood();
+            this.start();
+        }
+
+        findNextTarget() {
+            while(this.charIndex < this.targetChars.length && this.targetChars[this.charIndex] === ' ') {
+                this.charIndex++;
+            }
+        }
+
+        renderSentence() {
+            let html = '';
+            this.targetChars.forEach((char, index) => {
+                let className = 'game-char';
+                if (index < this.charIndex) {
+                    className += ' eaten'; 
+                    if (index === this.lastEatenIndex) {
+                        className += ' just-eaten';
+                    }
+                } else if (index === this.charIndex) {
+                    className += ' active'; 
+                } else {
+                    className += ' pending'; 
+                }
+                const displayChar = char === ' ' ? '&nbsp;' : char;
+                html += `<span class="${className}">${displayChar}</span>`;
+            });
+            this.sentenceDisplay.innerHTML = html;
+        }
+
+        getFood() {
+            let position;
+            let isValid = false;
+            while (!isValid) {
+                position = {
+                    x: Math.floor(Math.random() * (this.canvas.width / this.grid)) * this.grid,
+                    y: Math.floor(Math.random() * (this.canvas.height / this.grid)) * this.grid,
+                    type: this.targetChars[this.charIndex] 
+                };
+                isValid = true;
+                if (this.snake) {
+                    for (let part of this.snake) {
+                        if (part.x === position.x && part.y === position.y) {
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            return position;
+        }
+
+        start() {
+            this.loop();
+        }
+
+        pause() {
+            clearTimeout(this.loopId);
+        }
+
+        resume() {
+            this.loop();
+        }
+
+        destroy() {
+            this.pause();
+        }
+
+        handleInput(key) {
+            if (this.changingDirection) return;
+            const goingUp = this.dy === -this.grid;
+            const goingDown = this.dy === this.grid;
+            const goingRight = this.dx === this.grid;
+            const goingLeft = this.dx === -this.grid;
+            if ((key === 'ArrowUp') && !goingDown) { this.dx = 0; this.dy = -this.grid; }
+            if ((key === 'ArrowDown') && !goingUp) { this.dx = 0; this.dy = this.grid; }
+            if ((key === 'ArrowLeft') && !goingRight) { this.dx = -this.grid; this.dy = 0; }
+            if ((key === 'ArrowRight') && !goingLeft) { this.dx = this.grid; this.dy = 0; }
+            this.changingDirection = true;
+        }
+
+        loop() {
+            this.loopId = setTimeout(() => {
+                if (!app.gameActive) return;
+                this.changingDirection = false;
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.loop());
+            }, this.speed);
+        }
+
+        update() {
+            const head = { x: this.snake[0].x + this.dx, y: this.snake[0].y + this.dy };
+            if (head.x < 0 || head.x >= this.canvas.width || head.y < 0 || head.y >= this.canvas.height) {
+                this.onGameOver();
+                return;
+            }
+            this.snake.unshift(head);
+            if (head.x === this.food.x && head.y === this.food.y) {
+                this.score += 10;
+                this.lastEatenIndex = this.charIndex;
+                this.charIndex++;
+                this.findNextTarget();
+                this.renderSentence();
+                if(this.charIndex >= this.targetChars.length) {
+                    this.onWin();
+                    return;
+                }
+                this.food = this.getFood();
+                if(this.speed > 50) this.speed -= 2;
+            } else {
+                this.snake.pop();
+            }
+            for (let i = 1; i < this.snake.length; i++) {
+                if (head.x === this.snake[i].x && head.y === this.snake[i].y) {
+                    this.onGameOver();
+                    return;
+                }
+            }
+        }
+
+        draw() {
+            this.ctx.fillStyle = '#1e293b';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.font = 'bold 20px Nunito';
+            this.ctx.fillStyle = '#ef4444'; 
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(this.food.type, this.food.x + 10, this.food.y + 12);
+            this.snake.forEach((part, index) => {
+                this.ctx.fillStyle = index === 0 ? '#818cf8' : '#6366f1'; 
+                this.ctx.fillRect(part.x, part.y, this.grid - 2, this.grid - 2);
+            });
+        }
+    }
+
+    /**
+     * Spiel 2: BLOCK-SATZ (Tetris)
+     */
+    class TetrisGame {
+        constructor(canvas, sentenceDisplay, onGameOver, onWin) {
+            this.type = 'tetris';
+            this.canvas = canvas;
+            this.sentenceDisplay = sentenceDisplay;
+            this.ctx = canvas.getContext('2d');
+            this.onGameOver = onGameOver;
+            this.onWin = onWin;
+            this.grid = 20;
+            this.cols = 15;
+            this.rows = 20;
+            this.board = Array.from({length: this.rows}, () => Array(this.cols).fill(0));
+            this.shapes = {
+                'I': [[1,1,1,1]], 'J': [[1,0,0],[1,1,1]], 'L': [[0,0,1],[1,1,1]],
+                'O': [[1,1],[1,1]], 'S': [[0,1,1],[1,1,0]], 'T': [[0,1,0],[1,1,1]], 'Z': [[1,1,0],[0,1,1]]
+            };
+            this.colors = ['#000', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+            const sentences = [
+                "Practice makes perfect", "Learning is fun", "Never give up",
+                "Knowledge is power", "Dream big always", "Code creates future"
+            ];
+            const fullText = sentences[Math.floor(Math.random() * sentences.length)];
+            this.targetWords = fullText.split(' ');
+            this.wordIndex = 0; 
+            this.lastEatenIndex = -1;
+            this.renderSentence();
+            this.activePiece = null;
+            this.loopId = null;
+            this.dropCounter = 0;
+            this.dropInterval = 500;
+            this.lastTime = 0;
+            this.spawn();
+            this.animate();
+        }
+
+        renderSentence() {
+            let html = '';
+            this.targetWords.forEach((word, index) => {
+                let className = 'game-char word-spacing'; 
+                if (index < this.wordIndex) {
+                    className += ' eaten'; 
+                    if (index >= this.lastEatenIndex) {
+                         className += ' just-eaten';
+                    }
+                } else if (index === this.wordIndex) {
+                    className += ' active'; 
+                } else {
+                    className += ' pending'; 
+                }
+                html += `<span class="${className}">${word}</span>`;
+            });
+            this.sentenceDisplay.innerHTML = html;
+        }
+
+        spawn() {
+            const keys = Object.keys(this.shapes);
+            const type = keys[Math.floor(Math.random() * keys.length)];
+            const shape = this.shapes[type];
+            this.activePiece = {
+                shape: shape,
+                x: Math.floor(this.cols / 2) - Math.floor(shape[0].length / 2),
+                y: 0,
+                colorId: Math.floor(Math.random() * 7) + 1
+            };
+            if (this.collide(this.activePiece.x, this.activePiece.y, this.activePiece.shape)) {
+                this.onGameOver();
+            }
+        }
+
+        handleInput(key) {
+            if (!this.activePiece) return;
+            if (key === 'ArrowLeft') {
+                if (!this.collide(this.activePiece.x - 1, this.activePiece.y, this.activePiece.shape)) this.activePiece.x--;
+            } else if (key === 'ArrowRight') {
+                if (!this.collide(this.activePiece.x + 1, this.activePiece.y, this.activePiece.shape)) this.activePiece.x++;
+            } else if (key === 'ArrowDown') {
+                this.drop();
+            } else if (key === 'Action' || key === 'ArrowUp') {
+                const rotated = this.rotate(this.activePiece.shape);
+                if (!this.collide(this.activePiece.x, this.activePiece.y, rotated)) this.activePiece.shape = rotated;
+            }
+        }
+
+        rotate(matrix) { return matrix[0].map((val, index) => matrix.map(row => row[index]).reverse()); }
+
+        collide(x, y, shape) {
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c] !== 0) {
+                        let newX = x + c;
+                        let newY = y + r;
+                        if (newX < 0 || newX >= this.cols || newY >= this.rows) return true;
+                        if (newY >= 0 && this.board[newY][newX] !== 0) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        merge() {
+            this.activePiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        this.board[this.activePiece.y + y][this.activePiece.x + x] = this.activePiece.colorId;
+                    }
+                });
+            });
+        }
+
+        sweep() {
+            let linesCleared = 0;
+            outer: for (let y = this.rows - 1; y >= 0; y--) {
+                for (let x = 0; x < this.cols; x++) {
+                    if (this.board[y][x] === 0) continue outer;
+                }
+                const row = this.board.splice(y, 1)[0].fill(0);
+                this.board.unshift(row);
+                linesCleared++;
+                y++; 
+            }
+            return linesCleared;
+        }
+
+        drop() {
+            if (!this.collide(this.activePiece.x, this.activePiece.y + 1, this.activePiece.shape)) {
+                this.activePiece.y++;
+            } else {
+                this.merge();
+                const lines = this.sweep();
+                if (lines > 0) {
+                    this.lastEatenIndex = this.wordIndex; 
+                    this.wordIndex += lines;
+                    this.renderSentence();
+                    if (this.wordIndex >= this.targetWords.length) {
+                        this.onWin();
+                        return;
+                    }
+                } else {
+                     this.lastEatenIndex = -1; 
+                }
+                this.spawn();
+            }
+            this.dropCounter = 0;
+        }
+
+        pause() { cancelAnimationFrame(this.loopId); }
+        resume() { this.lastTime = performance.now(); this.animate(); }
+        destroy() { this.pause(); }
+
+        animate(time = 0) {
+            if (!app.gameActive) return;
+            const deltaTime = time - this.lastTime;
+            this.lastTime = time;
+            this.dropCounter += deltaTime;
+            if (this.dropCounter > this.dropInterval) this.drop();
+            this.draw();
+            this.loopId = requestAnimationFrame(this.animate.bind(this));
+        }
+
+        draw() {
+            this.ctx.fillStyle = '#1e293b';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.board.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) this.drawBlock(x, y, this.colors[value]);
+                });
+            });
+            if (this.activePiece) {
+                this.activePiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) this.drawBlock(this.activePiece.x + x, this.activePiece.y + y, this.colors[this.activePiece.colorId]);
+                    });
+                });
+            }
+        }
+
+        drawBlock(x, y, color) {
+            this.ctx.fillStyle = color;
+            this.ctx.fillRect(x * this.grid, y * this.grid, this.grid - 1, this.grid - 1);
+            this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            this.ctx.fillRect(x * this.grid + 2, y * this.grid, 2, this.grid - 1);
+        }
+    }
+
+    /**
+     * Spiel 3: MEMO-MATCH (Memory)
+     */
+    class MemoryGame {
+        constructor(container, onWin) {
+            this.type = 'memory';
+            this.container = container;
+            this.onWin = onWin;
+            this.cards = [];
+            this.flippedCards = [];
+            this.matchedCount = 0;
+            this.locked = false;
+
+            // Großer Pool an Vokabel-Paaren (80+ Stück für maximale Abwechslung)
+            const allPairs = [
+                // Schule & Lernen
+                { id: 'book', icon: '📖', word: 'Book' },
+                { id: 'pencil', icon: '✏️', word: 'Pencil' },
+                { id: 'brain', icon: '🧠', word: 'Brain' },
+                { id: 'school', icon: '🏫', word: 'School' },
+                { id: 'note', icon: '📝', word: 'Note' },
+                { id: 'idea', icon: '💡', word: 'Idea' },
+                { id: 'computer', icon: '💻', word: 'Computer' },
+                { id: 'backpack', icon: '🎒', word: 'Backpack' },
+                { id: 'scissors', icon: '✂️', word: 'Scissors' },
+                { id: 'microscope', icon: '🔬', word: 'Microscope' },
+                { id: 'palette', icon: '🎨', word: 'Art' },
+                
+                // Natur & Welt
+                { id: 'world', icon: '🌍', word: 'World' },
+                { id: 'sun', icon: '☀️', word: 'Sun' },
+                { id: 'moon', icon: '🌙', word: 'Moon' },
+                { id: 'tree', icon: '🌳', word: 'Tree' },
+                { id: 'flower', icon: '🌸', word: 'Flower' },
+                { id: 'fire', icon: '🔥', word: 'Fire' },
+                { id: 'water', icon: '💧', word: 'Water' },
+                { id: 'star', icon: '⭐', word: 'Star' },
+                { id: 'cloud', icon: '☁️', word: 'Cloud' },
+                { id: 'rain', icon: '🌧️', word: 'Rain' },
+                { id: 'snow', icon: '❄️', word: 'Snow' },
+                { id: 'rainbow', icon: '🌈', word: 'Rainbow' },
+                { id: 'mountain', icon: '⛰️', word: 'Mountain' },
+                { id: 'cactus', icon: '🌵', word: 'Cactus' },
+                
+                // Tiere
+                { id: 'dog', icon: '🐶', word: 'Dog' },
+                { id: 'cat', icon: '🐱', word: 'Cat' },
+                { id: 'fish', icon: '🐟', word: 'Fish' },
+                { id: 'bear', icon: '🐻', word: 'Bear' },
+                { id: 'bird', icon: '🐦', word: 'Bird' },
+                { id: 'lion', icon: '🦁', word: 'Lion' },
+                { id: 'tiger', icon: '🐯', word: 'Tiger' },
+                { id: 'monkey', icon: '🐵', word: 'Monkey' },
+                { id: 'cow', icon: '🐮', word: 'Cow' },
+                { id: 'pig', icon: '🐷', word: 'Pig' },
+                { id: 'mouse', icon: '🐭', word: 'Mouse' },
+                { id: 'frog', icon: '🐸', word: 'Frog' },
+                { id: 'snake', icon: '🐍', word: 'Snake' },
+                { id: 'chicken', icon: '🐔', word: 'Chicken' },
+                { id: 'duck', icon: '🦆', word: 'Duck' },
+                { id: 'butterfly', icon: '🦋', word: 'Butterfly' },
+                
+                // Essen
+                { id: 'apple', icon: '🍎', word: 'Apple' },
+                { id: 'banana', icon: '🍌', word: 'Banana' },
+                { id: 'pizza', icon: '🍕', word: 'Pizza' },
+                { id: 'burger', icon: '🍔', word: 'Burger' },
+                { id: 'coffee', icon: '☕', word: 'Coffee' },
+                { id: 'icecream', icon: '🍦', word: 'Ice Cream' },
+                { id: 'grapes', icon: '🍇', word: 'Grapes' },
+                { id: 'watermelon', icon: '🍉', word: 'Melon' },
+                { id: 'strawberry', icon: '🍓', word: 'Berry' },
+                { id: 'bread', icon: '🍞', word: 'Bread' },
+                { id: 'egg', icon: '🥚', word: 'Egg' },
+                { id: 'cake', icon: '🍰', word: 'Cake' },
+                { id: 'cookie', icon: '🍪', word: 'Cookie' },
+                { id: 'donut', icon: '🍩', word: 'Donut' },
+                
+                // Kleidung & Accessoires
+                { id: 'tshirt', icon: '👕', word: 'T-Shirt' },
+                { id: 'pants', icon: '👖', word: 'Pants' },
+                { id: 'dress', icon: '👗', word: 'Dress' },
+                { id: 'shoe', icon: '👞', word: 'Shoe' },
+                { id: 'hat', icon: '👒', word: 'Hat' },
+                { id: 'glasses', icon: '👓', word: 'Glasses' },
+                { id: 'watch', icon: '⌚', word: 'Watch' },
+                { id: 'ring', icon: '💍', word: 'Ring' },
+                { id: 'crown', icon: '👑', word: 'Crown' },
+                
+                // Transport
+                { id: 'car', icon: '🚗', word: 'Car' },
+                { id: 'bus', icon: '🚌', word: 'Bus' },
+                { id: 'train', icon: '🚆', word: 'Train' },
+                { id: 'ship', icon: '🚢', word: 'Ship' },
+                { id: 'plane', icon: '✈️', word: 'Plane' },
+                { id: 'rocket', icon: '🚀', word: 'Rocket' },
+                { id: 'bicycle', icon: '🚲', word: 'Bicycle' },
+                { id: 'ambulance', icon: '🚑', word: 'Ambulance' },
+                { id: 'police', icon: '🚓', word: 'Police' },
+                
+                // Objekte & Sonstiges
+                { id: 'house', icon: '🏠', word: 'House' },
+                { id: 'phone', icon: '📱', word: 'Phone' },
+                { id: 'clock', icon: '⏰', word: 'Clock' },
+                { id: 'key', icon: '🔑', word: 'Key' },
+                { id: 'camera', icon: '📷', word: 'Camera' },
+                { id: 'football', icon: '⚽', word: 'Ball' },
+                { id: 'music', icon: '🎵', word: 'Music' },
+                { id: 'gift', icon: '🎁', word: 'Gift' },
+                { id: 'bell', icon: '🔔', word: 'Bell' },
+                { id: 'heart', icon: '❤️', word: 'Heart' },
+                { id: 'diamond', icon: '💎', word: 'Diamond' },
+                { id: 'ghost', icon: '👻', word: 'Ghost' },
+                { id: 'robot', icon: '🤖', word: 'Robot' },
+                { id: 'hammer', icon: '🔨', word: 'Hammer' },
+                { id: 'anchor', icon: '⚓', word: 'Anchor' },
+                { id: 'trophy', icon: '🏆', word: 'Trophy' }
+            ];
+
+            // 1. Pool mischen
+            // 2. Die ersten 8 auswählen (= 1 Spielrunde)
+            const selectedPairs = allPairs
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 8);
+
+            // Deck erstellen: Für jedes Paar zwei unterschiedliche Karten (1x Icon, 1x Wort)
+            let deck = [];
+            selectedPairs.forEach(p => {
+                deck.push({ id: p.id, content: p.icon, type: 'icon' });
+                deck.push({ id: p.id, content: p.word, type: 'word' });
+            });
+
+            // Deck final mischen für das Spielfeld
+            deck.sort(() => 0.5 - Math.random());
+            
+            this.initBoard(deck);
+        }
+
+        initBoard(deck) {
+            this.container.innerHTML = `<div class="memory-grid"></div>`;
+            const grid = this.container.querySelector('.memory-grid');
+
+            deck.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.classList.add('memory-card');
+                card.dataset.id = item.id; // Match-ID
+                
+                // Schriftgröße anpassen: Groß für Icons, kleiner/fett für Wörter
+                const fontSizeClass = item.type === 'word' ? 'text-lg font-bold text-indigo-700' : 'text-4xl';
+                
+                card.innerHTML = `<span class="hidden-content opacity-0 transition-opacity ${fontSizeClass}">${item.content}</span>`;
+                
+                card.addEventListener('click', () => this.flipCard(card));
+                grid.appendChild(card);
+                this.cards.push(card);
+            });
+        }
+
+        flipCard(card) {
+            if (this.locked) return;
+            if (card.classList.contains('flipped')) return;
+            if (card.classList.contains('matched')) return;
+
+            card.classList.add('flipped');
+            card.querySelector('span').classList.remove('opacity-0');
+            
+            this.flippedCards.push(card);
+
+            if (this.flippedCards.length === 2) {
+                this.checkMatch();
+            }
+        }
+
+        checkMatch() {
+            this.locked = true;
+            const [c1, c2] = this.flippedCards;
+            // Vergleiche die ID (nicht den Inhalt, da Bild != Wort)
+            const match = c1.dataset.id === c2.dataset.id;
+
+            if (match) {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                this.matchedCount += 2;
+                this.flippedCards = [];
+                this.locked = false;
+                
+                if (this.matchedCount === this.cards.length) {
+                    setTimeout(this.onWin, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    c1.classList.remove('flipped');
+                    c2.classList.remove('flipped');
+                    c1.querySelector('span').classList.add('opacity-0');
+                    c2.querySelector('span').classList.add('opacity-0');
+                    this.flippedCards = [];
+                    this.locked = false;
+                }, 1000);
+            }
+        }
+
+        handleInput(key) {
+            // Memory needs mostly mouse/touch
+        }
+
+        pause() {
+            // Nix zu tun, timer stopped in App
+            this.locked = true; // Prevent clicks
+        }
+
+        resume() {
+            this.locked = false;
+        }
+
+        destroy() {
+            this.container.innerHTML = '';
+        }
+    }
+
+    // Init App variable (will be assigned after state load)
+    let app = null;
+
+    // --- STARTUP ---
+    // 1. Load State FIRST
+    state = loadState();
+    checkStreakValidity();
+    flattenDB();
+    updateHeaderStats();
+    
+    // 2. Initialize Arcade App AFTER state is loaded
+    app = new ArcadeApp();
+    
+    if (typeof render === 'function') {
+        render();
+    } else {
+        console.error("Critical: render function missing!");
+    }
+
+    </script>
+</body>
+</html>
