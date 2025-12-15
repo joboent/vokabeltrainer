@@ -539,7 +539,9 @@
         <!-- Footer -->
         <div class="mt-4 text-center">
             <small class="text-slate-400 text-xs font-semibold block">Vocabulary Trainer v8.0 • Audio Edition</small>
-            <small class="text-slate-300 text-[10px] font-bold">© Jean Marz 2025</small>
+            <div class="text-slate-300 text-[10px] font-bold mt-1">
+                © Jean Marz 2025 • <a href="mailto:jean.h.marz@gmail.com" class="hover:text-blue-400 transition">Contact</a>
+            </div>
         </div>
     </div>
 
@@ -1713,9 +1715,22 @@
 
     function startAudioBatch() {
         const batch = audioMatchingState.batches[audioMatchingState.currentBatchIndex];
-        // Items vorbereiten (ID muss für match übereinstimmen)
-        const audioItems = batch.map((w, i) => ({ id: i, text: w.en, type: 'audio' }));
-        const wordItems = batch.map((w, i) => ({ id: i, text: w.de, type: 'word' })); 
+        
+        const audioItems = [];
+        const wordItems = [];
+
+        batch.forEach((w, i) => {
+            // Zufällige Richtung: 50% Chance für EN Audio -> DE Text, 50% DE Audio -> EN Text
+            const isEnAudio = Math.random() > 0.5;
+            
+            if (isEnAudio) {
+                audioItems.push({ id: i, text: w.en, lang: 'en-US', type: 'audio' });
+                wordItems.push({ id: i, text: w.de, type: 'word' });
+            } else {
+                audioItems.push({ id: i, text: w.de, lang: 'de-DE', type: 'audio' });
+                wordItems.push({ id: i, text: w.en, type: 'word' });
+            }
+        });
 
         // Getrennt mischen
         audioItems.sort(() => Math.random() - 0.5);
@@ -1777,9 +1792,9 @@
         }
     }
 
-    window.handleAudioClick = function(id, text, btn) {
+    window.handleAudioClick = function(id, text, lang, btn) {
         if (audioMatchingState.matchedIds.includes(id)) return;
-        playSpeech(text);
+        playSpeech(text, lang);
 
         audioMatchingState.selectedAudioId = id;
         renderAudioMatchBoard();
@@ -1822,7 +1837,7 @@
                                 if(isMatched) btnClass += " matched";
                                 
                                 return `
-                                    <button onclick="handleAudioClick(${item.id}, '${escapeHtml(item.text)}', this)" class="${btnClass}">
+                                    <button onclick="handleAudioClick(${item.id}, '${escapeHtml(item.text)}', '${item.lang}', this)" class="${btnClass}">
                                         <i data-lucide="volume-2" class="w-6 h-6 fill-current"></i>
                                     </button>
                                 `;
