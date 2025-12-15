@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vocabulary Trainer — Clean Edition</title>
+    <title>Vocabulary Trainer — Audio Edition</title>
     
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -94,7 +94,7 @@
 
         .btn-press:active { transform: translateY(2px); box-shadow: none; border-bottom-width: 0; margin-top: 4px; }
 
-        /* --- ARCADE GAME STYLES (IMPORTED) --- */
+        /* --- ARCADE GAME STYLES --- */
         .game-canvas {
             image-rendering: pixelated;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -252,11 +252,66 @@
             z-index: 10;
         }
         .game-char.pending { color: #94a3b8; opacity: 0.7; }
+
+        /* --- Audio Match Specific Styles --- */
+        .match-btn { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .audio-circle {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3), 0 2px 4px -1px rgba(99, 102, 241, 0.06);
+            color: white;
+            border: none;
+        }
+        .audio-circle:active { transform: scale(0.9); }
+        .audio-circle.selected {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            transform: scale(1.1);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+        }
+        .audio-circle.matched {
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            opacity: 0.4;
+            transform: scale(0.8);
+            pointer-events: none;
+        }
+        .word-capsule {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .word-capsule.selected {
+            background: #eff6ff; 
+            border-color: #3b82f6; 
+            color: #1d4ed8; 
+            transform: translateX(5px);
+        }
+        .word-capsule.matched {
+            background: #f0fdf4; 
+            border-color: #86efac; 
+            color: #15803d; 
+            opacity: 0.6; 
+            pointer-events: none;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+        .match-btn.error {
+            animation: shake 0.4s ease-in-out; 
+            background: #fef2f2 !important; 
+            border-color: #f87171 !important; 
+            color: #b91c1c !important;
+        }
     </style>
 </head>
-<body id="main-body" class="bg-gradient-to-br from-slate-100 via-white to-blue-50 min-h-screen flex flex-col items-center font-sans text-slate-800 select-none overflow-hidden animate-gradient transition-all duration-500">
+<body id="main-body" class="bg-transparent min-h-screen flex flex-col items-center font-sans text-slate-800 select-none overflow-hidden transition-all duration-500">
 
-    <!-- Background Elements -->
+    <!-- NEW: Dedicated Background Element (Separated from body for filter application) -->
+    <!-- UPDATED: More saturated colors so hue-rotate works visibly -->
+    <div id="app-background" class="fixed inset-0 z-[-1] bg-gradient-to-br from-pink-200 via-purple-200 to-indigo-200 animate-gradient transition-all duration-300"></div>
+
+    <!-- Background Elements (Floating items) -->
     <div id="bg-elements" class="absolute inset-0 overflow-hidden pointer-events-none w-full h-full"></div>
 
     <!-- Motivation Overlay -->
@@ -271,9 +326,10 @@
     </div>
     
     <!-- Zen Mode Overlay -->
-    <div id="zen-overlay" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900 text-white hidden opacity-0 zen-enter">
-        <div id="zen-bg" class="absolute inset-0 animate-zen-bg opacity-90"></div>
-        <div class="z-10 text-center space-y-12 px-6">
+    <!-- Added onclick to close -->
+    <div id="zen-overlay" onclick="stopZenMode()" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900 text-white hidden opacity-0 zen-enter cursor-pointer">
+        <div id="zen-bg" class="absolute inset-0 animate-zen-bg opacity-90 pointer-events-none"></div>
+        <div class="z-10 text-center space-y-12 px-6 pointer-events-none">
             <h2 id="zen-title" class="text-3xl md:text-5xl font-extralight tracking-[0.2em] text-teal-50 opacity-90 leading-tight">
                 TIME FOR A<br>SHORT BREAK
             </h2>
@@ -286,6 +342,8 @@
                 Breathe in deeply... and out...
             </p>
         </div>
+        <!-- Close Hint -->
+        <div class="absolute bottom-10 text-white/30 text-xs tracking-widest uppercase animate-pulse pointer-events-none">Tap to close</div>
     </div>
 
     <!-- Break Selection Overlay -->
@@ -480,7 +538,7 @@
 
         <!-- Footer -->
         <div class="mt-4 text-center">
-            <small class="text-slate-400 text-xs font-semibold block">Vocabulary Trainer v7.2 • Clean & Stable</small>
+            <small class="text-slate-400 text-xs font-semibold block">Vocabulary Trainer v8.0 • Audio Edition</small>
             <small class="text-slate-300 text-[10px] font-bold">© Jean Marz 2025</small>
         </div>
     </div>
@@ -514,6 +572,36 @@
                             <input id="session-size" type="number" min="1" max="100" value="15" class="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-xl px-3 py-2 text-center focus:outline-none focus:border-blue-500 transition">
                         </div>
                     </div>
+                    
+                    <!-- Audio Match Toggle -->
+                    <div class="mt-4 flex items-center justify-between bg-slate-50 p-3 rounded-xl border-2 border-slate-200">
+                        <span class="text-sm font-bold text-slate-600">Audio Match Review</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-audio-match" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- NEW: Background Settings -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hintergrund anpassen</label>
+                    <div class="space-y-4 bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-xs font-bold text-slate-600">Farbton</span>
+                                <span class="text-xs font-mono text-slate-400" id="hue-val">0</span>
+                            </div>
+                            <input type="range" id="bg-hue" min="0" max="360" value="0" class="w-full h-2 bg-gradient-to-r from-red-400 via-green-400 to-blue-400 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-xs font-bold text-slate-600">Helligkeit (Augenschoner)</span>
+                                <span class="text-xs font-mono text-slate-400" id="bright-val">100%</span>
+                            </div>
+                            <input type="range" id="bg-brightness" min="50" max="100" value="100" class="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Server Packs Section -->
@@ -542,10 +630,16 @@
 
                 <div class="pt-2 flex items-center justify-between">
                     <button id="btn-reset-app" class="text-rose-400 font-bold text-xs hover:text-rose-600 transition">Reset All Data</button>
-                    <!-- Debug Heart: Quick Game Launch -->
-                    <button onclick="startArcadeDebug()" class="text-rose-500 hover:text-rose-600 transition opacity-30 hover:opacity-100 p-2 text-sm" title="Test: Start Arcade">
-                        ❤️
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <!-- UPDATED: Quick Zen Launch (Standard 60s) -->
+                        <button onclick="startManualZen()" class="text-teal-500 hover:text-teal-600 transition opacity-50 hover:opacity-100 p-2 text-xl" title="Zen-Modus starten (60s)">
+                            🧘
+                        </button>
+                        <!-- Debug Heart: Quick Game Launch -->
+                        <button onclick="startArcadeDebug()" class="text-rose-500 hover:text-rose-600 transition opacity-30 hover:opacity-100 p-2 text-sm" title="Test: Start Arcade">
+                            ❤️
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -565,15 +659,29 @@
     const DEFAULT_STATE = {
         words: [], customPack: [], 
         stats: {xp:0, streak:0, totalMastered:0, lastLearningDate: null, sessionsCompleted: 0}, 
-        sm2: {}, settings: {volume:1, ttsRate:1, sessionSize:15, lastLevel: null} 
+        sm2: {}, 
+        settings: {
+            volume:1, ttsRate:1, sessionSize:15, lastLevel: null, enableAudioMatch: true,
+            bgHue: 0, bgBrightness: 100 // New Defaults
+        } 
     };
 
     let state = null; // Loaded later
-    let session = {queue:[], currentIndex:0, level:'A1', isActive: false, struggleCount: 0};
+    let session = {queue:[], reviewPool: [], currentIndex:0, level:'A1', isActive: false, struggleCount: 0};
     let isCardFlipped = false;
     let audioCtx = null;
     let zenNodes = [];
     const mainEl = document.getElementById('main-content');
+    
+    // --- AUDIO MATCH STATE ---
+    let audioMatchingState = {
+        selectedAudioId: null, // ID of selected audio button
+        selectedWordId: null,  // ID of selected word button
+        matchedIds: [],        // List of ID pairs that are matched
+        batches: [],           // Batches for sequential playing
+        currentBatchIndex: 0,
+        batchData: null        // Current batch data
+    };
 
     function updateHeaderStats(){
         if(!state) return;
@@ -717,6 +825,14 @@
                 case 5: Sound.playTone(523, 'sine', 0.1); Sound.playTone(659, 'sine', 0.1, 80); Sound.playTone(784, 'sine', 0.3, 160); break;
             }
         },
+        match: () => {
+            Sound.playTone(659, 'sine', 0.1);
+            Sound.playTone(880, 'sine', 0.2, 100);
+        },
+        error: () => {
+            Sound.playTone(150, 'sawtooth', 0.2);
+            Sound.playTone(100, 'sawtooth', 0.2, 150);
+        },
         fanfare: () => { 
             [523, 659, 784, 1046].forEach((f, i) => Sound.playTone(f, 'sine', 0.3, i * 120)); 
         },
@@ -848,6 +964,17 @@
         }, 500);
     };
 
+    // --- FEATURE: MANUAL ZEN START (REPLACES DEBUG) ---
+    window.startManualZen = function() {
+        // Close settings modal
+        const modal = document.getElementById('settings-modal');
+        modal.classList.add('opacity-0'); 
+        setTimeout(() => modal.classList.add('hidden'), 300);
+        
+        // Start Custom Zen (60s)
+        startZenMode('custom', null, 60000);
+    };
+
     // --- DEBUG: Quick Start Arcade ---
     window.startArcadeDebug = function() {
         // Close settings modal
@@ -872,7 +999,7 @@
     };
 
 
-    function startZenMode(type = 'struggle', onComplete = null) {
+    function startZenMode(type = 'struggle', onComplete = null, customDuration = null) {
         const overlay = document.getElementById('zen-overlay');
         const bg = document.getElementById('zen-bg');
         const titleEl = document.getElementById('zen-title');
@@ -883,7 +1010,11 @@
         let duration = 30000;
         let bgClass = 'animate-zen-bg';
 
-        if(type === 'start') {
+        if(customDuration) {
+            duration = customDuration;
+            titleEl.innerHTML = "ZEN FOCUS";
+            subEl.innerText = "Relax for " + (duration/1000) + " seconds...";
+        } else if(type === 'start') {
             duration = 12000; 
             titleEl.innerHTML = "FIND<br>FOCUS";
             subEl.innerText = "Prepare yourself...";
@@ -911,7 +1042,8 @@
         Sound.stopZen();
         setTimeout(() => {
             overlay.classList.add('hidden');
-            if(onComplete) onComplete();
+            // FIX: Check if onComplete is a function to prevent crashes
+            if(typeof onComplete === 'function') onComplete();
         }, 3000);
     }
 
@@ -947,7 +1079,10 @@
         let selected = availableCards.slice(0, size);
         selected.sort(() => Math.random() - 0.5);
         
+        // MODIFIED: Copy selection to review pool for Audio Game
+        session.reviewPool = JSON.parse(JSON.stringify(selected));
         session.queue = selected.map(w => ({ ...w, isEnToDe: Math.random() > 0.5 }));
+        
         session.currentIndex = 0;
         session.level = level;
         session.isActive = true;
@@ -1055,15 +1190,21 @@
         saveState();
 
         if(session.queue.length === 0){
-            session.isActive = false;
+            // MODIFIED: Audio Game Injection
             state.stats.sessionsCompleted = (state.stats.sessionsCompleted || 0) + 1;
             saveState();
 
-            if(state.stats.sessionsCompleted % 3 === 0) {
-                // CHANGED: Show Break Selection
-                showBreakSelection();
+            // Check if Audio Match is enabled
+            if (state.settings.enableAudioMatch !== false) { // Default to true if undefined
+                // Start Audio Match Review automatically instead of summary
+                initAudioMatchReview();
             } else {
-                renderSessionSummary();
+                // If disabled, go to regular flow
+                if(state.stats.sessionsCompleted % 3 === 0) {
+                    showBreakSelection();
+                } else {
+                    renderSessionSummary();
+                }
             }
         } else {
             session.currentIndex = clamp(session.currentIndex, 0, session.queue.length - 1);
@@ -1114,6 +1255,8 @@
     function renderSessionSummary(){
         Sound.fanfare();
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        
+        session.isActive = false; // Ensure session inactive
         
         const count = state.stats.sessionsCompleted || 0;
         const counts = session.ratingCounts || {0:0, 2:0, 3:0, 4:0, 5:0};
@@ -1539,6 +1682,176 @@
                     btnElement.disabled = false;
                 }, 2000);
             });
+    }
+
+    // --- 8. AUDIO MATCH NEW FUNCTIONS ---
+
+    function initAudioMatchReview() {
+        // Stellen Sie sicher, dass session.reviewPool mit den Wörtern gefüllt ist.
+        if (!session.reviewPool || session.reviewPool.length === 0) {
+            // Fallback: Wenn leer, direkt Zusammenfassung
+            if(state.stats.sessionsCompleted % 3 === 0) {
+                showBreakSelection();
+            } else {
+                renderSessionSummary();
+            }
+            return;
+        }
+        
+        // Wörter in Batches von max. 5 aufteilen (für bessere Darstellung)
+        const words = [...session.reviewPool];
+        const chunkSize = 5;
+        audioMatchingState.batches = [];
+
+        for (let i = 0; i < words.length; i += chunkSize) {
+            audioMatchingState.batches.push(words.slice(i, i + chunkSize));
+        }
+
+        audioMatchingState.currentBatchIndex = 0;
+        startAudioBatch();
+    }
+
+    function startAudioBatch() {
+        const batch = audioMatchingState.batches[audioMatchingState.currentBatchIndex];
+        // Items vorbereiten (ID muss für match übereinstimmen)
+        const audioItems = batch.map((w, i) => ({ id: i, text: w.en, type: 'audio' }));
+        const wordItems = batch.map((w, i) => ({ id: i, text: w.de, type: 'word' })); 
+
+        // Getrennt mischen
+        audioItems.sort(() => Math.random() - 0.5);
+        wordItems.sort(() => Math.random() - 0.5);
+
+        audioMatchingState.batchData = { audioItems, wordItems };
+        audioMatchingState.selectedAudioId = null;
+        audioMatchingState.selectedWordId = null;
+        audioMatchingState.matchedIds = [];
+
+        renderAudioMatchBoard();
+    }
+
+    function checkAudioMatch() {
+        const aId = audioMatchingState.selectedAudioId;
+        const wId = audioMatchingState.selectedWordId;
+        
+        // Nur prüfen, wenn beide Seiten ausgewählt sind
+        if (aId !== null && wId !== null) {
+            if (aId === wId) {
+                // MATCH!
+                Sound.match();
+                audioMatchingState.matchedIds.push(aId);
+                audioMatchingState.selectedAudioId = null;
+                audioMatchingState.selectedWordId = null;
+                renderAudioMatchBoard();
+
+                // Prüfe, ob Batch abgeschlossen
+                if (audioMatchingState.matchedIds.length === audioMatchingState.batchData.audioItems.length) {
+                    setTimeout(() => {
+                        if (audioMatchingState.currentBatchIndex < audioMatchingState.batches.length - 1) {
+                            audioMatchingState.currentBatchIndex++;
+                            startAudioBatch(); // Nächster Batch
+                        } else {
+                            // ENDE der gesamten Audio-Übung -> Weiter zur Zusammenfassung
+                            if(state.stats.sessionsCompleted % 3 === 0) {
+                                showBreakSelection();
+                            } else {
+                                renderSessionSummary();
+                            }
+                        }
+                    }, 800);
+                }
+
+            } else {
+                // MISMATCH
+                Sound.error();
+                
+                // Visuelle Fehlerrückmeldung
+                const buttons = document.querySelectorAll('.match-btn.selected');
+                buttons.forEach(b => b.classList.add('error'));
+
+                setTimeout(() => {
+                    audioMatchingState.selectedAudioId = null;
+                    audioMatchingState.selectedWordId = null;
+                    renderAudioMatchBoard();
+                }, 500);
+            }
+        }
+    }
+
+    window.handleAudioClick = function(id, text, btn) {
+        if (audioMatchingState.matchedIds.includes(id)) return;
+        playSpeech(text);
+
+        audioMatchingState.selectedAudioId = id;
+        renderAudioMatchBoard();
+
+        checkAudioMatch();
+    };
+
+    window.handleWordClick = function(id, btn) {
+        if (audioMatchingState.matchedIds.includes(id)) return;
+        Sound.playTone(400, 'sine', 0.05);
+
+        audioMatchingState.selectedWordId = id;
+        renderAudioMatchBoard();
+
+        checkAudioMatch();
+    };
+
+    function renderAudioMatchBoard() {
+        const progressStr = `Audio Match: Part ${audioMatchingState.currentBatchIndex + 1}/${audioMatchingState.batches.length}`;
+        const { audioItems, wordItems } = audioMatchingState.batchData;
+        
+        // Ersetzt den Inhalt von mainEl
+        mainEl.innerHTML = `
+            <div class="flex-grow w-full max-w-md flex flex-col items-center justify-center animate-pop p-2">
+                
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-100 rounded-3xl p-6 shadow-inner w-full mb-4">
+                    <div class="mb-4 text-center">
+                        <h2 class="text-xl font-black text-indigo-900 tracking-tight">Listen & Match</h2>
+                        <p class="text-indigo-400 text-[10px] font-bold uppercase tracking-widest">${progressStr}</p>
+                    </div>
+                    
+                    <div class="flex justify-between w-full gap-4">
+                        <!-- Linke Spalte: Audio Circles -->
+                        <div class="flex flex-col gap-4 w-auto items-center">
+                            ${audioItems.map(item => {
+                                const isMatched = audioMatchingState.matchedIds.includes(item.id);
+                                const isSelected = audioMatchingState.selectedAudioId === item.id;
+                                let btnClass = "w-14 h-14 rounded-full flex items-center justify-center match-btn audio-circle transition-all duration-300";
+                                if(isSelected) btnClass += " selected";
+                                if(isMatched) btnClass += " matched";
+                                
+                                return `
+                                    <button onclick="handleAudioClick(${item.id}, '${escapeHtml(item.text)}', this)" class="${btnClass}">
+                                        <i data-lucide="volume-2" class="w-6 h-6 fill-current"></i>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <!-- Rechte Spalte: Word Capsules -->
+                        <div class="flex flex-col gap-3 flex-grow justify-center">
+                             ${wordItems.map(item => {
+                                const isMatched = audioMatchingState.matchedIds.includes(item.id);
+                                const isSelected = audioMatchingState.selectedWordId === item.id;
+                                let btnClass = "w-full min-h-[50px] rounded-xl flex items-center justify-center match-btn px-4 text-sm font-bold text-slate-600 break-words text-center word-capsule transition-all duration-300";
+                                if(isSelected) btnClass += " selected";
+                                if(isMatched) btnClass += " matched";
+                                
+                                return `
+                                    <button onclick="handleWordClick(${item.id}, this)" class="${btnClass}">
+                                        ${escapeHtml(item.text)}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-slate-300 text-xs font-medium italic">Tap speaker to hear, then tap matching word</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
     
     // --- ARCADE GAME LOGIC (IMPORTED AS-IS) ---
@@ -2466,6 +2779,54 @@
     // 2. Initialize Arcade App AFTER state is loaded
     app = new ArcadeApp();
     
+    // --- SETTINGS INIT ---
+    // Sync Audio Toggle
+    const audioMatchToggle = document.getElementById('setting-audio-match');
+    audioMatchToggle.checked = state.settings.enableAudioMatch !== false;
+    audioMatchToggle.onchange = (e) => { state.settings.enableAudioMatch = e.target.checked; saveState(); };
+
+    // Sync Background Sliders
+    const hueInput = document.getElementById('bg-hue');
+    const hueVal = document.getElementById('hue-val');
+    const brightInput = document.getElementById('bg-brightness');
+    const brightVal = document.getElementById('bright-val');
+    const bgEl = document.getElementById('app-background');
+
+    function applyBg() {
+        // Values
+        const h = state.settings.bgHue || 0;
+        const b = state.settings.bgBrightness || 100;
+
+        // Update Inputs
+        hueInput.value = h;
+        hueVal.innerText = h;
+        brightInput.value = b;
+        brightVal.innerText = b + "%";
+        
+        // Apply Filter to background Element
+        // brightness: 100 is normal. <100 is darker.
+        // hue-rotate: 0 is normal.
+        bgEl.style.filter = `hue-rotate(${h}deg) brightness(${b}%)`;
+    }
+
+    // Init Values
+    if(state.settings.bgHue === undefined) state.settings.bgHue = 0;
+    if(state.settings.bgBrightness === undefined) state.settings.bgBrightness = 100;
+    applyBg();
+
+    hueInput.oninput = (e) => {
+        state.settings.bgHue = e.target.value;
+        applyBg();
+    };
+    hueInput.onchange = () => saveState(); // Save on release
+
+    brightInput.oninput = (e) => {
+        state.settings.bgBrightness = e.target.value;
+        applyBg();
+    };
+    brightInput.onchange = () => saveState(); // Save on release
+
+
     if (typeof render === 'function') {
         render();
     } else {
