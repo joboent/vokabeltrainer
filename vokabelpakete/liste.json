@@ -1,16 +1,16 @@
 [
-  "A1_beginner.json",
-  "A1_travel.json",
-  "A1-A2_business.json",
-  "A2_beginner.json",
-  "A2_travel.json",
-  "B1-B2 business.json",
-  "B1-B2 generally.json",
-  "B1-B2 travel.json",
-  "C1-C2 business.json",
-  "C1-C2 generally.json",
-  "C1-C2 travel.json",
-  "Redewendungen.json",
-  "Simple.json"
+  { "file": "A1_beginner.json", "name": "✨ Niveau A1 Beginner" },
+  { "file": "A1_travel.json", "name": "✈️ Niveau A1 Travel" },
+  { "file": "A2_beginner.json", "name": "✨ Niveau A2 Beginner" },
+  { "file": "A2_travel.json", "name": "✈️ Niveau A2 Travel" },
+  { "file": "A1-A2_business.json", "name": "💼 Niveau A1/A2 Business" },
+  { "file": "B1-B2 generally.json", "name": "✨ Niveau B1/B2 Generally" },
+  { "file": "B1-B2 travel.json", "name": "✈️ Niveau B1/B2 Travel" },
+  { "file": "B1-B2 business.json", "name": "💼 Niveau B1/B2 Business" },
+  { "file": "C1-C2 generally.json", "name": "✨ Niveau 1/2 Generally" },
+  { "file": "C1-C2 travel.json", "name": "✈️ Niveau 1/2 Travel" },
+  { "file": "C1-C2 business.json", "name": "💼 Niveau 1/2 Business" },
+  { "file": "Simple.json", "name": "😊 Simple Words/Sentences" },
+  { "file": "idioms.json", "name": "👹 Idioms" },
+  { "file": "All.json", "name": "❤️All vocabulary packages❤️" }
 ]
-
