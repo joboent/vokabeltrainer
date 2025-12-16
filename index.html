@@ -303,6 +303,68 @@
             border-color: #f87171 !important; 
             color: #b91c1c !important;
         }
+
+        /* --- MATCH-3 SPECIFIC STYLES --- */
+        #match3-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 3px;
+            width: 100%;
+            max-width: 340px; /* Keep it constrained in arcade view */
+            aspect-ratio: 1 / 1;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            padding: 6px;
+            border: 2px solid #e0e7ff;
+        }
+
+        .tile {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(16px, 5vw, 24px); 
+            cursor: pointer;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, background-color 0.2s;
+            position: relative;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .tile.selected {
+            transform: scale(1.15);
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            z-index: 20;
+            border: 2px solid #3b82f6;
+        }
+
+        .tile.match {
+            animation: pop-fade 0.3s ease-out forwards;
+        }
+
+        @keyframes pop-fade {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particle-fade 0.8s ease-out forwards;
+            z-index: 30;
+        }
+
+        @keyframes particle-fade {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
     </style>
 </head>
 <body id="main-body" class="bg-transparent min-h-screen flex flex-col items-center font-sans text-slate-800 select-none overflow-hidden transition-all duration-500">
@@ -396,12 +458,13 @@
                     
                     <!-- Game Selection -->
                     <div class="grid gap-3">
-                        <button onclick="app.startGame('snake')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                        <!-- REPLACED: Snake with Match-3 -->
+                        <button onclick="app.startGame('match3')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-pink-500 hover:bg-pink-50 transition-all">
                             <div class="flex items-center gap-3">
-                                <span class="text-2xl">🐛</span>
+                                <span class="text-2xl">🍬</span>
                                 <div class="text-left">
-                                    <div class="font-bold">Word Worm</div>
-                                    <div class="text-xs text-slate-400">Snake with sentences</div>
+                                    <div class="font-bold">Süßer Rausch</div>
+                                    <div class="text-xs text-slate-400">Match-3 Puzzle</div>
                                 </div>
                             </div>
                             <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
@@ -439,8 +502,17 @@
                 
                 <div id="game-sentence-display" class="hidden w-full max-w-[340px] mb-4 p-4 bg-white rounded-xl shadow-lg border border-indigo-100 text-center text-xl font-mono z-20 min-h-[80px] flex items-center justify-center flex-wrap gap-1"></div>
 
+                <!-- Shared Canvas for Tetris (Snake removed) -->
                 <canvas id="gameCanvas" width="300" height="400" class="hidden bg-slate-800 rounded-lg shadow-xl mb-4 shrink-0"></canvas>
                 
+                <!-- Match-3 Container -->
+                <div id="match3-container" class="hidden w-full flex flex-col items-center">
+                    <div class="bg-indigo-100 text-indigo-800 px-4 py-2 rounded-full mb-4 font-bold shadow-sm">
+                        Points: <span id="match3-score">0</span>
+                    </div>
+                    <div id="match3-board"></div>
+                </div>
+
                 <div id="memoryBoard" class="hidden w-full h-full max-h-[400px] overflow-y-auto mb-4"></div>
 
                 <div id="controls" class="hidden w-full pb-8 shrink-0">
@@ -539,8 +611,8 @@
         <!-- Footer -->
         <div class="mt-4 text-center">
             <small class="text-slate-400 text-xs font-semibold block">Vocabulary Trainer v8.0 • Audio Edition</small>
-            <div class="text-slate-300 text-[10px] font-bold mt-1">
-                © Jean Marz 2025 • <a href="mailto:jean.h.marz@gmail.com" class="hover:text-blue-400 transition">Contact</a>
+            <div class="text-blue-900 text-[10px] font-bold mt-1">
+                © Jean Marz 2025 • <a href="mailto:jean.h.marz@gmail.com" class="hover:text-blue-700 transition">Contact</a>
             </div>
         </div>
     </div>
@@ -587,18 +659,18 @@
 
                 <!-- NEW: Background Settings -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hintergrund anpassen</label>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Customize Background</label>
                     <div class="space-y-4 bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
                         <div>
                             <div class="flex justify-between mb-1">
-                                <span class="text-xs font-bold text-slate-600">Farbton</span>
+                                <span class="text-xs font-bold text-slate-600">Hue</span>
                                 <span class="text-xs font-mono text-slate-400" id="hue-val">0</span>
                             </div>
                             <input type="range" id="bg-hue" min="0" max="360" value="0" class="w-full h-2 bg-gradient-to-r from-red-400 via-green-400 to-blue-400 rounded-lg appearance-none cursor-pointer">
                         </div>
                         <div>
                             <div class="flex justify-between mb-1">
-                                <span class="text-xs font-bold text-slate-600">Helligkeit (Augenschoner)</span>
+                                <span class="text-xs font-bold text-slate-600">Brightness (Eye Saver)</span>
                                 <span class="text-xs font-mono text-slate-400" id="bright-val">100%</span>
                             </div>
                             <input type="range" id="bg-brightness" min="50" max="100" value="100" class="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer">
@@ -634,7 +706,7 @@
                     <button id="btn-reset-app" class="text-rose-400 font-bold text-xs hover:text-rose-600 transition">Reset All Data</button>
                     <div class="flex items-center gap-2">
                         <!-- UPDATED: Quick Zen Launch (Standard 60s) -->
-                        <button onclick="startManualZen()" class="text-teal-500 hover:text-teal-600 transition opacity-50 hover:opacity-100 p-2 text-xl" title="Zen-Modus starten (60s)">
+                        <button onclick="startManualZen()" class="text-teal-500 hover:text-teal-600 transition opacity-50 hover:opacity-100 p-2 text-xl" title="Start Zen Mode (60s)">
                             🧘
                         </button>
                         <!-- Debug Heart: Quick Game Launch -->
@@ -1421,7 +1493,7 @@
                         <button onclick="rateCurrent(2)" class="col-span-1 bg-orange-400 hover:bg-orange-500 text-white rounded-xl border-b-4 border-orange-600 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><span class="text-xs font-black">2</span><span class="text-[10px] font-bold">Hard</span></button>
                         <button onclick="rateCurrent(3)" class="col-span-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><span class="text-xs font-black">3</span><span class="text-[10px] font-bold">Ok</span></button>
                         <button onclick="rateCurrent(4)" class="col-span-1 bg-blue-400 hover:bg-blue-500 text-white rounded-xl border-b-4 border-blue-600 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><span class="text-xs font-black">4</span><span class="text-[10px] font-bold">Good</span></button>
-                        <button onclick="rateCurrent(5)" class="col-span-1 bg-green-500 hover:bg-green-600 text-white rounded-xl border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><i data-lucide="check" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-bold">Perfekt</span></button>
+                        <button onclick="rateCurrent(5)" class="col-span-1 bg-green-500 hover:bg-green-600 text-white rounded-xl border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition flex flex-col items-center justify-center shadow-md"><i data-lucide="check" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-bold">Perfect</span></button>
                     </div>
                 `}
             </div>
@@ -1627,10 +1699,12 @@
         defaultOpt.selected = true;
         select.add(defaultOpt);
 
-        fileList.forEach(filename => {
+        fileList.forEach(item => {
             const opt = document.createElement('option');
-            opt.value = filename;
-            opt.text = filename;
+            // Support both string arrays (old) and object arrays (new)
+            const isObj = typeof item === 'object' && item !== null;
+            opt.value = isObj ? item.file : item;
+            opt.text = isObj ? (item.name || item.file) : item;
             select.add(opt);
         });
 
@@ -1869,7 +1943,7 @@
         if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
     
-    // --- ARCADE GAME LOGIC (IMPORTED AS-IS) ---
+    // --- ARCADE GAME LOGIC ---
     /**
      * Main App Control (Economy, Navigation)
      */
@@ -1895,6 +1969,10 @@
                 gameContainer: document.getElementById('game-container'),
                 canvas: document.getElementById('gameCanvas'),
                 memoryBoard: document.getElementById('memoryBoard'),
+                // New for Match 3
+                match3Container: document.getElementById('match3-container'),
+                match3Score: document.getElementById('match3-score'),
+                
                 controls: document.getElementById('controls'),
                 overlay: document.getElementById('overlay-screen'),
                 timerDisplay: document.getElementById('timer-display'),
@@ -2061,8 +2139,11 @@
             this.ui.timerDisplay.classList.remove('hidden');
             this.ui.overlay.classList.add('hidden');
             
+            // Hide all potential game containers
             this.ui.canvas.classList.add('hidden');
             this.ui.memoryBoard.classList.add('hidden');
+            this.ui.match3Container.classList.add('hidden');
+            
             this.ui.controls.classList.add('hidden');
             this.ui.actionBtn.classList.add('hidden');
             this.ui.sentenceDisplay.classList.add('hidden'); 
@@ -2071,12 +2152,13 @@
             this.ui.timeLeft.innerText = this.timeLeft;
             this.gameActive = true;
 
-            if (type === 'snake') {
-                this.ui.canvas.classList.remove('hidden');
-                this.ui.controls.classList.remove('hidden');
-                this.ui.sentenceDisplay.classList.remove('hidden');
-                this.ui.sentenceDisplay.style.display = 'flex'; 
-                this.currentGame = new SnakeGame(this.ui.canvas, this.ui.sentenceDisplay, () => this.endGame('GameOver'), () => this.endGame('LevelWin'));
+            if (type === 'match3') {
+                this.ui.match3Container.classList.remove('hidden');
+                // No extra controls needed for touch/click games
+                this.currentGame = new Match3Game(
+                    document.getElementById('match3-board'), 
+                    this.ui.match3Score
+                );
             } else if (type === 'tetris') {
                 this.ui.canvas.classList.remove('hidden');
                 this.ui.controls.classList.remove('hidden');
@@ -2162,7 +2244,7 @@
             } else if (reason === 'Win') {
                 icon.innerText = "🎉";
                 title.innerText = "You Won!";
-                msg.innerText = "All pairs found!";
+                msg.innerText = "Great job!";
             } else if (reason === 'LevelWin') {
                 this.modifyGems(30); // Add Bonus to global
                 icon.innerText = "🏆";
@@ -2204,174 +2286,367 @@
         }
     }
 
-    // Snake Game
-    class SnakeGame {
-        constructor(canvas, sentenceDisplay, onGameOver, onWin) {
-            this.type = 'snake';
-            this.canvas = canvas;
-            this.sentenceDisplay = sentenceDisplay;
-            this.ctx = canvas.getContext('2d');
-            this.onGameOver = onGameOver;
-            this.onWin = onWin;
-            this.grid = 20;
-            this.snake = [{x: 160, y: 160}, {x: 140, y: 160}, {x: 120, y: 160}];
-            this.dx = this.grid;
-            this.dy = 0;
+    // Match-3 Game Class (Ported from suesses.html)
+    class Match3Game {
+        constructor(boardElement, scoreElement) {
+            this.type = 'match3';
+            this.width = 8;
+            this.height = 8;
+            this.candies = ['🍎', '🍊', '🍇', '🥥', '⭐', '💎'];
+            this.grid = [];
             this.score = 0;
-            this.changingDirection = false;
-            this.loopId = null;
-            this.speed = 100;
-            this.lastEatenIndex = -1; 
+            this.dragStart = null; 
+            this.isProcessing = false;
+            this.isPaused = false;
+            
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+            this.selectedTile = null;
 
-            const sentences = [
-                "The cat sleeps",
-                "I love coding",
-                "Hello world",
-                "Learn new words",
-                "Keep going on",
-                "Sun is shining",
-                "Read a book",
-                "Time to play"
-            ];
-            this.fullSentence = sentences[Math.floor(Math.random() * sentences.length)];
-            this.targetChars = this.fullSentence.split('');
-            this.charIndex = 0; 
+            this.boardElement = boardElement;
+            this.scoreElement = scoreElement;
 
-            this.findNextTarget();
-            this.renderSentence();
-            this.food = this.getFood();
-            this.start();
+            // Event Listeners references for cleanup
+            this.boundMove = null;
+            this.boundUp = null;
+
+            this.init();
         }
 
-        findNextTarget() {
-            while(this.charIndex < this.targetChars.length && this.targetChars[this.charIndex] === ' ') {
-                this.charIndex++;
+        init() {
+            this.score = 0;
+            this.updateScoreUI();
+            this.createBoard();
+            this.fillBoard();
+            this.resolveMatches(false); 
+        }
+
+        createBoard() {
+            this.boardElement.innerHTML = '';
+            this.grid = [];
+
+            for (let r = 0; r < this.height; r++) {
+                const row = [];
+                for (let c = 0; c < this.width; c++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.dataset.r = r;
+                    tile.dataset.c = c;
+                    
+                    this.addInputListeners(tile, r, c);
+                    this.boardElement.appendChild(tile);
+                    row.push({ element: tile, value: null });
+                }
+                this.grid.push(row);
             }
         }
 
-        renderSentence() {
-            let html = '';
-            this.targetChars.forEach((char, index) => {
-                let className = 'game-char';
-                if (index < this.charIndex) {
-                    className += ' eaten'; 
-                    if (index === this.lastEatenIndex) {
-                        className += ' just-eaten';
-                    }
-                } else if (index === this.charIndex) {
-                    className += ' active'; 
+        addInputListeners(tile, r, c) {
+            // Maus
+            tile.addEventListener('mousedown', (e) => this.handleInputStart(r, c, e.clientX, e.clientY));
+            
+            // Touch
+            tile.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                this.handleInputStart(r, c, touch.clientX, touch.clientY);
+            }, { passive: false });
+        }
+
+        handleInputStart(r, c, x, y) {
+            if (this.isProcessing || this.isPaused) return;
+
+            this.touchStartX = x;
+            this.touchStartY = y;
+            this.dragStart = { r, c };
+            
+            this.selectTile(r, c);
+
+            this.boundMove = (e) => {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                this.handleInputMove(clientX, clientY);
+            };
+
+            this.boundUp = () => {
+                this.removeGlobalListeners();
+                this.dragStart = null;
+            };
+
+            document.addEventListener('mousemove', this.boundMove);
+            document.addEventListener('mouseup', this.boundUp);
+            document.addEventListener('touchmove', this.boundMove, { passive: false });
+            document.addEventListener('touchend', this.boundUp);
+        }
+
+        removeGlobalListeners() {
+            if(this.boundMove) {
+                document.removeEventListener('mousemove', this.boundMove);
+                document.removeEventListener('touchmove', this.boundMove);
+            }
+            if(this.boundUp) {
+                document.removeEventListener('mouseup', this.boundUp);
+                document.removeEventListener('touchend', this.boundUp);
+            }
+        }
+
+        handleInputMove(currentX, currentY) {
+            if (!this.dragStart || this.isProcessing || this.isPaused) return;
+
+            const deltaX = currentX - this.touchStartX;
+            const deltaY = currentY - this.touchStartY;
+            const threshold = 30; 
+
+            if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
+                this.removeGlobalListeners();
+
+                let targetR = this.dragStart.r;
+                let targetC = this.dragStart.c;
+
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    if (deltaX > 0) targetC++; else targetC--;
                 } else {
-                    className += ' pending'; 
+                    if (deltaY > 0) targetR++; else targetR--;
                 }
-                const displayChar = char === ' ' ? '&nbsp;' : char;
-                html += `<span class="${className}">${displayChar}</span>`;
-            });
-            this.sentenceDisplay.innerHTML = html;
+
+                this.attemptSwap(this.dragStart.r, this.dragStart.c, targetR, targetC);
+                this.deselectTile();
+                this.dragStart = null;
+            }
         }
 
-        getFood() {
-            let position;
-            let isValid = false;
-            while (!isValid) {
-                position = {
-                    x: Math.floor(Math.random() * (this.canvas.width / this.grid)) * this.grid,
-                    y: Math.floor(Math.random() * (this.canvas.height / this.grid)) * this.grid,
-                    type: this.targetChars[this.charIndex] 
-                };
-                isValid = true;
-                if (this.snake) {
-                    for (let part of this.snake) {
-                        if (part.x === position.x && part.y === position.y) {
-                            isValid = false;
-                            break;
-                        }
+        selectTile(r, c) {
+            if (this.selectedTile) {
+                this.grid[this.selectedTile.r][this.selectedTile.c].element.classList.remove('selected');
+            }
+            this.selectedTile = { r, c };
+            this.grid[r][c].element.classList.add('selected');
+        }
+
+        deselectTile() {
+            if (this.selectedTile) {
+                this.grid[this.selectedTile.r][this.selectedTile.c].element.classList.remove('selected');
+                this.selectedTile = null;
+            }
+        }
+
+        isValidPos(r, c) {
+            return r >= 0 && r < this.height && c >= 0 && c < this.width;
+        }
+
+        async attemptSwap(r1, c1, r2, c2) {
+            if (!this.isValidPos(r2, c2)) return;
+
+            this.isProcessing = true;
+            await this.swapTiles(r1, c1, r2, c2);
+            this.swapData(r1, c1, r2, c2);
+
+            const matches = this.findMatches();
+
+            if (matches.length > 0) {
+                await this.processMatches(matches);
+            } else {
+                this.swapData(r1, c1, r2, c2);
+                await this.swapTiles(r1, c1, r2, c2);
+                this.isProcessing = false;
+            }
+        }
+
+        swapData(r1, c1, r2, c2) {
+            const tempVal = this.grid[r1][c1].value;
+            this.grid[r1][c1].value = this.grid[r2][c2].value;
+            this.grid[r2][c2].value = tempVal;
+
+            this.grid[r1][c1].element.innerText = this.grid[r1][c1].value;
+            this.grid[r2][c2].element.innerText = this.grid[r2][c2].value;
+        }
+
+        swapTiles(r1, c1, r2, c2) {
+            return new Promise(resolve => {
+                setTimeout(() => resolve(), 150);
+            });
+        }
+
+        findMatches() {
+            const matches = new Set();
+            // Horizontal
+            for (let r = 0; r < this.height; r++) {
+                for (let c = 0; c < this.width - 2; c++) {
+                    const v1 = this.grid[r][c].value;
+                    const v2 = this.grid[r][c+1].value;
+                    const v3 = this.grid[r][c+2].value;
+                    if (v1 && v1 === v2 && v2 === v3) {
+                        matches.add(`${r},${c}`);
+                        matches.add(`${r},${c+1}`);
+                        matches.add(`${r},${c+2}`);
                     }
                 }
             }
-            return position;
-        }
-
-        start() {
-            this.loop();
-        }
-
-        pause() {
-            clearTimeout(this.loopId);
-        }
-
-        resume() {
-            this.loop();
-        }
-
-        destroy() {
-            this.pause();
-        }
-
-        handleInput(key) {
-            if (this.changingDirection) return;
-            const goingUp = this.dy === -this.grid;
-            const goingDown = this.dy === this.grid;
-            const goingRight = this.dx === this.grid;
-            const goingLeft = this.dx === -this.grid;
-            if ((key === 'ArrowUp') && !goingDown) { this.dx = 0; this.dy = -this.grid; }
-            if ((key === 'ArrowDown') && !goingUp) { this.dx = 0; this.dy = this.grid; }
-            if ((key === 'ArrowLeft') && !goingRight) { this.dx = -this.grid; this.dy = 0; }
-            if ((key === 'ArrowRight') && !goingLeft) { this.dx = this.grid; this.dy = 0; }
-            this.changingDirection = true;
-        }
-
-        loop() {
-            this.loopId = setTimeout(() => {
-                if (!app.gameActive) return;
-                this.changingDirection = false;
-                this.update();
-                this.draw();
-                requestAnimationFrame(() => this.loop());
-            }, this.speed);
-        }
-
-        update() {
-            const head = { x: this.snake[0].x + this.dx, y: this.snake[0].y + this.dy };
-            if (head.x < 0 || head.x >= this.canvas.width || head.y < 0 || head.y >= this.canvas.height) {
-                this.onGameOver();
-                return;
-            }
-            this.snake.unshift(head);
-            if (head.x === this.food.x && head.y === this.food.y) {
-                this.score += 10;
-                this.lastEatenIndex = this.charIndex;
-                this.charIndex++;
-                this.findNextTarget();
-                this.renderSentence();
-                if(this.charIndex >= this.targetChars.length) {
-                    this.onWin();
-                    return;
-                }
-                this.food = this.getFood();
-                if(this.speed > 50) this.speed -= 2;
-            } else {
-                this.snake.pop();
-            }
-            for (let i = 1; i < this.snake.length; i++) {
-                if (head.x === this.snake[i].x && head.y === this.snake[i].y) {
-                    this.onGameOver();
-                    return;
+            // Vertikal
+            for (let c = 0; c < this.width; c++) {
+                for (let r = 0; r < this.height - 2; r++) {
+                    const v1 = this.grid[r][c].value;
+                    const v2 = this.grid[r+1][c].value;
+                    const v3 = this.grid[r+2][c].value;
+                    if (v1 && v1 === v2 && v2 === v3) {
+                        matches.add(`${r},${c}`);
+                        matches.add(`${r+1},${c}`);
+                        matches.add(`${r+2},${c}`);
+                    }
                 }
             }
-        }
-
-        draw() {
-            this.ctx.fillStyle = '#1e293b';
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.font = 'bold 20px Nunito';
-            this.ctx.fillStyle = '#ef4444'; 
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(this.food.type, this.food.x + 10, this.food.y + 12);
-            this.snake.forEach((part, index) => {
-                this.ctx.fillStyle = index === 0 ? '#818cf8' : '#6366f1'; 
-                this.ctx.fillRect(part.x, part.y, this.grid - 2, this.grid - 2);
+            return Array.from(matches).map(str => {
+                const [r, c] = str.split(',').map(Number);
+                return { r, c };
             });
+        }
+
+        async processMatches(matches) {
+            // Check if game was destroyed mid-process
+            if(!this.boardElement.innerHTML) return;
+
+            this.score += matches.length * 10;
+            this.updateScoreUI();
+
+            for (let {r, c} of matches) {
+                const tile = this.grid[r][c].element;
+                tile.classList.add('match');
+                this.createParticles(tile, this.grid[r][c].value);
+                this.grid[r][c].value = null;
+            }
+
+            await new Promise(r => setTimeout(r, 300));
+
+            for (let {r, c} of matches) {
+                this.grid[r][c].element.classList.remove('match');
+                this.grid[r][c].element.innerText = '';
+            }
+
+            await this.applyGravity();
+            await this.fillEmptySlots();
+
+            const newMatches = this.findMatches();
+            if (newMatches.length > 0) {
+                setTimeout(() => this.processMatches(newMatches), 300);
+            } else {
+                this.isProcessing = false;
+            }
+        }
+
+        async applyGravity() {
+            let moved = false;
+            for (let c = 0; c < this.width; c++) {
+                let emptyRow = this.height - 1;
+                for (let r = this.height - 1; r >= 0; r--) {
+                    if (this.grid[r][c].value !== null) {
+                        if (emptyRow !== r) {
+                            this.grid[emptyRow][c].value = this.grid[r][c].value;
+                            this.grid[emptyRow][c].element.innerText = this.grid[r][c].value;
+                            this.grid[r][c].value = null;
+                            this.grid[r][c].element.innerText = '';
+                            moved = true;
+                        }
+                        emptyRow--;
+                    }
+                }
+            }
+            if (moved) await new Promise(r => setTimeout(r, 200));
+        }
+
+        async fillEmptySlots() {
+            for (let r = 0; r < this.height; r++) {
+                for (let c = 0; c < this.width; c++) {
+                    if (this.grid[r][c].value === null) {
+                        const randomCandy = this.candies[Math.floor(Math.random() * this.candies.length)];
+                        this.grid[r][c].value = randomCandy;
+                        
+                        const el = this.grid[r][c].element;
+                        el.style.opacity = '0';
+                        el.style.transform = 'translateY(-20px)';
+                        el.innerText = randomCandy;
+                        
+                        void el.offsetWidth;
+                        el.style.transition = 'all 0.3s ease-out';
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                        
+                        setTimeout(() => {
+                            el.style.transition = ''; 
+                            el.style.transform = '';
+                        }, 300);
+                    }
+                }
+            }
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        fillBoard() {
+            for (let r = 0; r < this.height; r++) {
+                for (let c = 0; c < this.width; c++) {
+                    let candy;
+                    do {
+                        candy = this.candies[Math.floor(Math.random() * this.candies.length)];
+                    } while (
+                        (c >= 2 && this.grid[r][c-1].value === candy && this.grid[r][c-2].value === candy) ||
+                        (r >= 2 && this.grid[r-1][c].value === candy && this.grid[r-2][c].value === candy)
+                    );
+                    this.grid[r][c].value = candy;
+                    this.grid[r][c].element.innerText = candy;
+                }
+            }
+        }
+
+        resolveMatches(givePoints = false) {
+            const matches = this.findMatches();
+            if (matches.length > 0) {
+                for (let {r, c} of matches) {
+                    this.grid[r][c].value = null; 
+                    this.grid[r][c].element.innerText = '';
+                }
+                this.applyGravity().then(() => {
+                    this.fillEmptySlots().then(() => {
+                         this.resolveMatches(false);
+                    });
+                });
+            }
+        }
+
+        updateScoreUI() {
+            if(this.scoreElement) this.scoreElement.innerText = this.score;
+        }
+
+        createParticles(element, char) {
+            // Nur Partikel erzeugen, wenn Element sichtbar ist
+            if(!element) return;
+            
+            for (let i = 0; i < 5; i++) {
+                const particle = document.createElement('span');
+                particle.classList.add('particle');
+                particle.innerText = char;
+                particle.style.fontSize = '12px';
+                particle.style.left = '50%';
+                particle.style.top = '50%';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 30 + Math.random() * 40;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+
+                element.appendChild(particle);
+
+                setTimeout(() => particle.remove(), 800);
+            }
+        }
+        
+        // Interface methods for ArcadeApp
+        handleInput(key) { /* No keyboard input for this game */ }
+        pause() { this.isPaused = true; }
+        resume() { this.isPaused = false; }
+        destroy() {
+            this.removeGlobalListeners();
+            this.boardElement.innerHTML = '';
         }
     }
 
