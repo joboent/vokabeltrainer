@@ -7,9 +7,9 @@
   { "file": "B1-B2 generally.json", "name": "✨ Niveau B1/B2 Generally" },
   { "file": "B1-B2 travel.json", "name": "✈️ Niveau B1/B2 Travel" },
   { "file": "B1-B2 business.json", "name": "💼 Niveau B1/B2 Business" },
-  { "file": "C1-C2 generally.json", "name": "✨ Niveau 1/2 Generally" },
-  { "file": "C1-C2 travel.json", "name": "✈️ Niveau 1/2 Travel" },
-  { "file": "C1-C2 business.json", "name": "💼 Niveau 1/2 Business" },
+  { "file": "C1-C2 generally.json", "name": "✨ Niveau C1/C2 Generally" },
+  { "file": "C1-C2 travel.json", "name": "✈️ Niveau C1/C2 Travel" },
+  { "file": "C1-C2 business.json", "name": "💼 Niveau C1/C2 Business" },
   { "file": "Simple.json", "name": "😊 Simple Words/Sentences" },
   { "file": "idioms.json", "name": "👹 Idioms" },
   { "file": "All.json", "name": "❤️All vocabulary packages❤️" }
