@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zen Bubble Popper</title>
+    <title>Zen Bubble Popper - Hypno</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #0d1117; /* Very dark blue/gray */
@@ -44,21 +44,6 @@
         .bubble.zen-2 { background: radial-gradient(circle at 70% 30%, var(--zen-color-2), transparent); }
         .bubble.zen-3 { background: radial-gradient(circle at 70% 30%, var(--zen-color-3), transparent); }
         
-        .bubble.special-vocab {
-            background: radial-gradient(circle at 70% 30%, rgba(255, 165, 0, 0.7), transparent);
-            border: 3px solid rgba(255, 140, 0, 0.9);
-            box-shadow: 0 0 10px #ff8c00, inset 0 0 5px #ffffff;
-            display: flex; 
-            align-items: center;
-            justify-content: center;
-            font-weight: 600; 
-            font-size: 1.0rem; 
-            color: #fef3c7; 
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 
-                         0 0 1px rgba(255, 255, 255, 0.5); 
-            z-index: 20; 
-        }
-
         .bubble-text {
             pointer-events: none; 
             text-align: center;
@@ -91,7 +76,6 @@
         .fragment-zen-1 { background-color: var(--burst-color-1); box-shadow: 0 0 4px var(--burst-color-1); }
         .fragment-zen-2 { background-color: var(--burst-color-2); box-shadow: 0 0 4px var(--burst-color-2); }
         .fragment-zen-3 { background-color: var(--burst-color-3); box-shadow: 0 0 4px var(--burst-color-3); }
-        .fragment-special { background-color: orange; box-shadow: 0 0 4px orange; }
 
         /* ----------------------------------------------------------------------
            Background and UI
@@ -122,25 +106,6 @@
             opacity: 1;
             transform: translateY(0);
         }
-
-        /* Audio Control Button */
-        #audio-toggle {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 60;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: background 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #audio-toggle:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
     </style>
 </head>
 <body class="bg-gray-900 h-screen w-screen overflow-hidden text-gray-200 antialiased relative">
@@ -154,13 +119,20 @@
             <div id="streak-info" class="mt-1 text-xs text-yellow-400 transition-all duration-300 h-4"></div>
         </div>
 
-        <!-- Audio Toggle Button -->
-        <button id="audio-toggle" title="Toggle Music">
-            <svg id="audio-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-60">
-                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            </svg>
-        </button>
+        <!-- Controls (Exit & Audio) -->
+        <div class="absolute top-4 right-4 z-50 flex gap-2">
+            <!-- Permanent Back Button -->
+            <a href="index.html" title="Back to Trainer" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 no-underline border border-gray-700 hover:border-gray-500">
+                <span class="text-xl leading-none font-bold text-gray-300">✕</span>
+            </a>
+            
+            <button id="audio-toggle" title="Toggle Music" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 border border-gray-700 hover:border-gray-500">
+                <svg id="audio-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-60">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <script>
@@ -199,11 +171,7 @@
         
         let gameLoopId = null;
         let bubbleIntervalId = null;
-        let hasSpecialBubble = false; 
         
-        // Counter for orange bubble logic
-        let normalBubblesSinceLastSpecial = 0;
-
         // Web Audio API for meditative music
         let audioCtx = null;
         let mainGain = null;
@@ -322,20 +290,17 @@
         }
 
         function initGame() {
-            // Initialize game and audio immediately
             resizeCanvas();
             initAudio();
             
             window.addEventListener('resize', resizeCanvas);
 
-            // Listener for bubbles and audio toggle
             GAME_AREA.addEventListener('click', popBubble);
             AUDIO_TOGGLE.addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleAudio();
             });
 
-            // Start bubble creation and main loop
             bubbleIntervalId = setInterval(createBubble, 600); 
             gameLoopId = requestAnimationFrame(gameLoop);
         }
@@ -345,18 +310,10 @@
         }
 
         function createBubble() {
-            // Logic for orange bubbles: 5% chance, or forced after 40 normal bubbles
-            let isSpecial = (Math.random() < 0.05 || normalBubblesSinceLastSpecial >= 40) && !hasSpecialBubble; 
+            // No Special Bubbles anymore, just normal Zen
+            const size = random(50, 150); 
+            const color = BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
             
-            const size = isSpecial ? random(100, 180) : random(50, 150); 
-            const color = isSpecial ? 'special-vocab' : BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
-            
-            if (isSpecial) {
-                normalBubblesSinceLastSpecial = 0;
-            } else {
-                normalBubblesSinceLastSpecial++;
-            }
-
             let x, y, dx, dy;
             const marginX = window.innerWidth * 0.1;
             const marginY = window.innerHeight * 0.1;
@@ -377,15 +334,6 @@
             element.style.height = `${size}px`;
             element.style.transform = `translate(${x}px, ${y}px)`;
             element.dataset.color = color;
-
-            if (isSpecial) {
-                element.dataset.special = 'true';
-                hasSpecialBubble = true;
-                const text = document.createElement('span');
-                text.classList.add('bubble-text');
-                text.textContent = 'ready for Vocab';
-                element.appendChild(text);
-            }
 
             GAME_AREA.appendChild(element);
             bubbles.push({
@@ -410,7 +358,6 @@
                 bubble.element.style.transform = `translate(${bubble.x}px, ${bubble.y}px)`;
 
                 if (bubble.currentSize < BUBBLE_MIN_SIZE) {
-                    if (bubble.element.dataset.special === 'true') hasSpecialBubble = false;
                     bubble.element.remove();
                     bubbles.splice(i, 1);
                     continue;
@@ -419,7 +366,6 @@
                 const margin = 200;
                 if (bubble.x < -bubble.currentSize - margin || bubble.x > window.innerWidth + margin || 
                     bubble.y < -bubble.currentSize - margin || bubble.y > window.innerHeight + margin) {
-                    if (bubble.element.dataset.special === 'true') hasSpecialBubble = false;
                     bubble.element.remove();
                     bubbles.splice(i, 1);
                 }
@@ -431,7 +377,6 @@
             let fragmentClass = 'fragment-zen-1';
             if (color.includes('zen-2')) fragmentClass = 'fragment-zen-2';
             else if (color.includes('zen-3')) fragmentClass = 'fragment-zen-3';
-            else if (color.includes('special')) fragmentClass = 'fragment-special';
             
             const centerX = x + size / 2;
             const centerY = y + size / 2;
@@ -485,17 +430,6 @@
 
             createBurstEffect(clickedBubble.x, clickedBubble.y, clickedBubble.currentSize, clickedBubble.color);
 
-            if (element.dataset.special === 'true') {
-                hasSpecialBubble = false;
-                element.classList.add('bursting'); 
-                setTimeout(() => {
-                    element.remove();
-                    bubbles = bubbles.filter(b => b.element !== element);
-                    endGame();
-                }, 100); 
-                return;
-            }
-
             const color = element.dataset.color;
             let baseScore = 10;
             let currentPoints = baseScore;
@@ -521,25 +455,6 @@
                 element.remove();
                 bubbles = bubbles.filter(b => b.element !== element);
             }, 100);
-        }
-
-        function endGame() {
-            if (gameLoopId) cancelAnimationFrame(gameLoopId);
-            if (bubbleIntervalId) clearInterval(bubbleIntervalId);
-            GAME_AREA.removeEventListener('click', popBubble);
-            bubbles.forEach(b => b.element.remove());
-            bubbles = [];
-
-            GAME_AREA.innerHTML += `
-                <div id="end-screen" class="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-50">
-                    <div class="bg-teal-700 text-white p-8 rounded-xl shadow-2xl text-center border-4 border-teal-400">
-                        <h1 class="text-3xl font-bold mb-4">Ready for the Vocabulary Trainer!</h1>
-                        <p class="text-lg">Game ended with ${score} points.</p>
-                        <p class="text-lg mb-4">Simulating return to main program.</p>
-                    </div>
-                </div>
-            `;
-            GAME_AREA.style.cursor = 'default';
         }
 
         function showStreakMessage(count, points, reset = false) {

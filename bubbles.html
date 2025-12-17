@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zen Seifenblasen-Popper</title>
+    <title>Zen Bubble Popper</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- Tone.js (für Hintergrundmusik) -->
+    <!-- Tone.js (for background music) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
     
     <style>
@@ -42,27 +42,6 @@
         .bubble.zen-2 { background: radial-gradient(circle at 70% 30%, var(--zen-color-2), transparent); }
         .bubble.zen-3 { background: radial-gradient(circle at 70% 30%, var(--zen-color-3), transparent); }
         
-        .bubble.special-vocab {
-            background: radial-gradient(circle at 70% 30%, rgba(255, 165, 0, 0.7), transparent);
-            border: 3px solid rgba(255, 140, 0, 0.9);
-            box-shadow: 0 0 10px #ff8c00, inset 0 0 5px #ffffff;
-            display: flex; 
-            align-items: center;
-            justify-content: center;
-            font-weight: 600; 
-            font-size: 1.0rem; 
-            color: #fef3c7; 
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 0 0 1px rgba(255, 255, 255, 0.5); 
-            z-index: 20; 
-        }
-
-        .bubble-text {
-            pointer-events: none; 
-            text-align: center;
-            padding: 5px;
-            line-height: 1.1;
-        }
-
         .bubble.popped {
             opacity: 0;
             transform: scale(2.0) rotate(5deg); 
@@ -116,16 +95,23 @@
     <div id="game-area" class="w-full h-full relative">
         <div id="zen-buddha-bg" class="zen-bg-image"></div>
 
+        <!-- Score Display -->
         <div class="absolute top-4 left-4 p-3 bg-gray-800/70 backdrop-blur-sm rounded-xl shadow-lg z-50">
-            <h2 class="text-sm font-light leading-none">Punkte: 
+            <h2 class="text-sm font-light leading-none">Score: 
                 <span id="score" class="text-base font-semibold text-teal-400 score-glow">0</span>
             </h2>
             <div id="streak-info" class="mt-1 text-xs text-yellow-400 transition-all duration-300 h-4"></div>
         </div>
         
-        <div class="absolute top-4 right-4 z-50">
-            <button id="audio-toggle" title="Hintergrundmusik an/aus" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg">
-                <span id="audio-icon">🔈</span>
+        <!-- Controls (Exit & Audio) -->
+        <div class="absolute top-4 right-4 z-50 flex gap-2">
+            <!-- Permanent Back Button -->
+            <a href="index.html" title="Back to Trainer" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 no-underline border border-gray-700 hover:border-gray-500">
+                <span class="text-xl leading-none font-bold text-gray-300">✕</span>
+            </a>
+            
+            <button id="audio-toggle" title="Toggle Music" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 border border-gray-700 hover:border-gray-500">
+                <span id="audio-icon" class="text-xl leading-none">🔈</span>
             </button>
         </div>
     </div>
@@ -144,24 +130,22 @@
         let streakCount = 0;
         let bubbles = [];
         let particles = []; 
-        let bubbleIdCounter = 0;
         let lastFrameTime = performance.now();
         let isPlayingMusic = false;
         
         let gameLoopId = null;
         let bubbleIntervalId = null;
-        let hasSpecialBubble = false; 
         
         // --- TONE.JS AUDIO SETUP ---
         let musicSynth, heartbeatSynth;
         let tremolo, chorus;
 
         function setupAudio() {
-            // 1. Effekte für den schwingenden Ambient-Sound
+            // 1. Effects for ambient sound
             tremolo = new Tone.Tremolo(0.2, 0.5).start(); 
             chorus = new Tone.Chorus(0.5, 3.5, 0.8).start();
 
-            // 2. Hintergrundmusik Synth (PolySynth ermöglicht das gleichzeitige Spielen von Noten-Arrays)
+            // 2. Background Music Synth
             musicSynth = new Tone.PolySynth(Tone.Synth, {
                 oscillator: { type: "sine" },
                 envelope: {
@@ -176,7 +160,7 @@
             tremolo.connect(chorus);
             chorus.toDestination();
 
-            // 3. Herzschlag-Synth (Tiefer, weicher Sinus-Kick)
+            // 3. Heartbeat Synth
             heartbeatSynth = new Tone.MembraneSynth({
                 pitchDecay: 0.05,
                 octaves: 2,
@@ -185,30 +169,24 @@
                 volume: -24
             }).toDestination();
 
-            // Rhythmus-Schleife für Herzschlag (Lubb-Dupp ... Pause)
-            // 60 BPM (Ein Zyklus alle 2 Sekunden)
+            // Heartbeat Loop
             Tone.Transport.scheduleRepeat((time) => {
-                // Erster Schlag (Lubb)
                 heartbeatSynth.triggerAttackRelease("C1", "16n", time);
-                // Zweiter Schlag (Dupp) kurz darauf
                 heartbeatSynth.triggerAttackRelease("B0", "16n", time + 0.35);
             }, "2s");
         }
 
         function toggleAudio() {
-            // Tone.start() muss bei einer Nutzerinteraktion aufgerufen werden
             if (Tone.context.state !== 'running') {
                 Tone.start();
             }
 
             if (isPlayingMusic) {
-                // Sanftes Ausblenden der Noten
                 musicSynth.releaseAll(); 
                 Tone.Transport.pause();
                 isPlayingMusic = false;
                 AUDIO_ICON.textContent = '🔈';
             } else {
-                // Startet den Akkord (Ambient-Teppich)
                 musicSynth.triggerAttack(AMBIENT_NOTES);
                 Tone.Transport.start();
                 isPlayingMusic = true;
@@ -216,7 +194,7 @@
             }
         }
 
-        // --- PARTIKEL LOGIC ---
+        // --- PARTICLE LOGIC ---
         function createParticles(x, y, size) {
             const numParticles = 8 + Math.floor(size / 30);
             for (let i = 0; i < numParticles; i++) {
@@ -271,9 +249,9 @@
         function random(min, max) { return Math.random() * (max - min) + min; }
 
         function createBubble() {
-            let isSpecial = Math.random() < 0.025 && !hasSpecialBubble; 
-            const size = isSpecial ? random(100, 180) : random(50, 150); 
-            const color = isSpecial ? 'special-vocab' : BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
+            // Only normal bubbles now, no special vocab bubbles
+            const size = random(50, 150); 
+            const color = BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
             
             let x, y, dx, dy;
             const side = Math.floor(random(0, 4));
@@ -292,15 +270,6 @@
             element.style.transform = `translate(${x}px, ${y}px)`;
             element.dataset.color = color;
 
-            if (isSpecial) {
-                element.dataset.special = 'true';
-                hasSpecialBubble = true;
-                const text = document.createElement('span');
-                text.classList.add('bubble-text');
-                text.textContent = 'Bereit für Vokabeln';
-                element.appendChild(text);
-            }
-
             GAME_AREA.appendChild(element);
             bubbles.push({ x, y, dx, dy, size, element });
         }
@@ -313,7 +282,6 @@
                 b.y += b.dy * timeFactor;
                 b.element.style.transform = `translate(${b.x}px, ${b.y}px)`;
                 if (b.x < -b.size-200 || b.x > window.innerWidth+200 || b.y < -b.size-200 || b.y > window.innerHeight+200) {
-                    if (b.element.dataset.special === 'true') hasSpecialBubble = false;
                     b.element.remove();
                     bubbles.splice(i, 1);
                 }
@@ -327,12 +295,6 @@
             const bData = bubbles[idx];
             createParticles(bData.x, bData.y, bData.size);
 
-            if (element.dataset.special === 'true') {
-                hasSpecialBubble = false;
-                endGame();
-                return;
-            }
-
             const color = element.dataset.color;
             let currentPoints = color === lastColor ? 10 * (1 + Math.floor(++streakCount/5)) : (streakCount=1, lastColor=color, 10);
             score += currentPoints;
@@ -342,17 +304,9 @@
             setTimeout(() => { element.remove(); bubbles.splice(idx, 1); }, 100);
         }
 
-        function endGame() {
-            if (gameLoopId) cancelAnimationFrame(gameLoopId);
-            if (bubbleIntervalId) clearInterval(bubbleIntervalId);
-            if (musicSynth) musicSynth.releaseAll();
-            Tone.Transport.stop();
-            GAME_AREA.innerHTML += `<div class="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-50"><div class="bg-teal-700 text-white p-8 rounded-xl text-center border-4 border-teal-400"><h1 class="text-3xl font-bold mb-4">Bereit für den Vokabeltrainer!</h1><p class="text-lg">Punkte: ${score}</p></div></div>`;
-        }
-
         function showStreakMessage(count, points, reset) {
             STREAK_INFO.classList.remove('streak-visible'); 
-            STREAK_INFO.innerHTML = count < 2 || reset ? `<span class="text-gray-400">+${points}</span>` : `<span class="font-bold">${count >= 10 ? 'Zen-Meister!' : (count >= 5 ? 'Im Fluss!' : 'Streak!')}</span><span class="text-sm text-yellow-300 ml-1">${count}x</span><span class="text-teal-400 ml-2">(+${points})</span>`;
+            STREAK_INFO.innerHTML = count < 2 || reset ? `<span class="text-gray-400">+${points}</span>` : `<span class="font-bold">${count >= 10 ? 'Zen Master!' : (count >= 5 ? 'In the Flow!' : 'Streak!')}</span><span class="text-sm text-yellow-300 ml-1">${count}x</span><span class="text-teal-400 ml-2">(+${points})</span>`;
             setTimeout(() => STREAK_INFO.classList.add('streak-visible'), 10); 
         }
 

@@ -23,6 +23,23 @@
         .card-inner { transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .is-flipped { transform: rotateY(180deg); }
         
+        /* New Soothing Card Background */
+        .card-face-style {
+            /* Gentle abstract background with white overlay for readability */
+            background-image: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)), 
+                              url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card-face-style-back {
+            /* Slightly different tint for the back if desired, currently keeping consistent but distinct class */
+            background-image: linear-gradient(rgba(250, 250, 255, 0.9), rgba(250, 250, 255, 0.9)), 
+                              url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+
         /* Animations */
         @keyframes pop { 0% { transform: scale(0.9); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         .animate-pop { animation: pop 0.3s ease-out; }
@@ -304,47 +321,69 @@
             color: #b91c1c !important;
         }
 
-        /* --- MATCH-3 SPECIFIC STYLES --- */
+        /* --- UPDATED MATCH-3 STYLES --- */
         #match3-board {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            grid-template-rows: repeat(8, 1fr);
-            gap: 3px;
+            /* Now absolute positioning for true sliding */
+            position: relative; 
             width: 100%;
-            max-width: 340px; /* Keep it constrained in arcade view */
+            max-width: 340px; 
             aspect-ratio: 1 / 1;
-            background-color: rgba(255, 255, 255, 0.5);
-            border-radius: 12px;
-            padding: 6px;
-            border: 2px solid #e0e7ff;
+            /* Modern Glassmorphism Look */
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(255, 255, 255, 0.2);
+            padding: 0; /* Padding handled by logic */
+            overflow: hidden;
+            margin: 0 auto;
         }
 
         .tile {
-            width: 100%;
-            height: 100%;
+            position: absolute;
+            /* Size determined by JS (12.5% for 8x8) */
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: clamp(16px, 5vw, 24px); 
             cursor: pointer;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.2s, background-color 0.2s;
-            position: relative;
-            z-index: 10;
             user-select: none;
+            /* Smooth sliding animation */
+            transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), transform 0.2s, opacity 0.2s; 
+            z-index: 10;
         }
 
-        .tile.selected {
-            transform: scale(1.15);
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        .tile-inner {
+            width: 85%;
+            height: 85%;
+            border-radius: 50%; /* Circle shape */
+            background-color: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), inset 0 -2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(16px, 5vw, 24px);
+            border: 2px solid rgba(255,255,255,0.9);
+            transition: all 0.2s ease;
+        }
+
+        .tile:active .tile-inner { transform: scale(0.9); }
+
+        .tile.selected .tile-inner {
+            transform: scale(1.1);
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+            border-color: #3b82f6;
             z-index: 20;
-            border: 2px solid #3b82f6;
+            animation: pulse-select 1.5s infinite;
+        }
+        
+        @keyframes pulse-select {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
 
-        .tile.match {
+        .tile.match .tile-inner {
             animation: pop-fade 0.3s ease-out forwards;
         }
 
@@ -426,9 +465,11 @@
     </div>
 
     <!-- ARCADE OVERLAY (Replaces placeholder) -->
-    <div id="game-overlay" class="fixed inset-0 z-[200] flex flex-col bg-slate-50 text-slate-800 hidden overflow-hidden">
+    <!-- CHANGED: Now has a vibrant colorful background gradient instead of white -->
+    <div id="game-overlay" class="fixed inset-0 z-[200] flex flex-col bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 hidden overflow-hidden">
         <!-- Header / Stats -->
-        <header class="bg-white p-4 shadow-md flex justify-between items-center z-10 shrink-0 relative overflow-hidden h-20">
+        <!-- CHANGED: Added white/90 and backdrop blur for readability on colorful bg -->
+        <header class="bg-white/90 backdrop-blur-md p-4 shadow-md flex justify-between items-center z-10 shrink-0 relative overflow-hidden h-20">
             <h1 class="font-bold text-xl text-indigo-600 whitespace-nowrap z-20 relative drop-shadow-sm bg-white/50 px-1 rounded">Vocab Arcade</h1>
             
             <div id="playtime-warning-container" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
@@ -448,45 +489,46 @@
         </header>
 
         <!-- Main Content Area -->
-        <main class="flex-grow relative overflow-y-auto flex flex-col items-center justify-start p-4 bg-slate-50">
+        <!-- CHANGED: Removed bg-slate-50 to let gradient show -->
+        <main class="flex-grow relative overflow-y-auto flex flex-col items-center justify-start p-4">
             
             <!-- MENU SCREEN -->
             <div id="menu-screen" class="w-full max-w-md space-y-6 text-center mt-10">
-                <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                    <h2 class="text-2xl font-bold mb-2">Need a study break?</h2>
+                <!-- CHANGED: Card uses glassmorphism to blend with colorful background -->
+                <div class="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/40">
+                    <h2 class="text-2xl font-bold mb-2 text-slate-800">Need a study break?</h2>
                     <p class="text-slate-500 text-sm mb-6">Use your gems to play a round. Each game is time-limited.</p>
                     
                     <!-- Game Selection -->
                     <div class="grid gap-3">
-                        <!-- REPLACED: Snake with Match-3 -->
-                        <button onclick="app.startGame('match3')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-pink-500 hover:bg-pink-50 transition-all">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">🍬</span>
-                                <div class="text-left">
-                                    <div class="font-bold">Süßer Rausch</div>
-                                    <div class="text-xs text-slate-400">Match-3 Puzzle</div>
-                                </div>
-                            </div>
-                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
-                        </button>
-
-                        <button onclick="app.startGame('tetris')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-purple-500 hover:bg-purple-50 transition-all">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">🧱</span>
-                                <div class="text-left">
-                                    <div class="font-bold">Block Sentences</div>
-                                    <div class="text-xs text-slate-400">1 Line = 1 Word</div>
-                                </div>
-                            </div>
-                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
-                        </button>
-
-                        <button onclick="app.startGame('memory')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-green-500 hover:bg-green-50 transition-all">
+                        <button onclick="app.startGame('match3')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-white/50 bg-white/50 hover:bg-pink-50 hover:border-pink-300 transition-all shadow-sm">
                             <div class="flex items-center gap-3">
                                 <span class="text-2xl">🧠</span>
                                 <div class="text-left">
-                                    <div class="font-bold">Memo Match</div>
-                                    <div class="text-xs text-slate-400">Image & Word Pairs</div>
+                                    <div class="font-bold text-slate-800">Sugar Rush</div>
+                                    <div class="text-xs text-slate-500">Match-3 Puzzle</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
+                        </button>
+
+                        <button onclick="app.startGame('tetris')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-white/50 bg-white/50 hover:bg-purple-50 hover:border-purple-300 transition-all shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🧱</span>
+                                <div class="text-left">
+                                    <div class="font-bold text-slate-800">Block Sentences</div>
+                                    <div class="text-xs text-slate-500">1 Line = 1 Word</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
+                        </button>
+
+                        <button onclick="app.startGame('memory')" class="game-btn group flex items-center justify-between p-4 rounded-xl border-2 border-white/50 bg-white/50 hover:bg-green-50 hover:border-green-300 transition-all shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">💡</span>
+                                <div class="text-left">
+                                    <div class="font-bold text-slate-800">Memo Match</div>
+                                    <div class="text-xs text-slate-500">Image & Word Pairs</div>
                                 </div>
                             </div>
                             <div class="text-xs font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-indigo-100">-15 💎</div>
@@ -494,20 +536,20 @@
                     </div>
                 </div>
                 <!-- Added Return Button -->
-                <button onclick="closeArcade()" class="mt-6 w-full text-slate-400 font-bold hover:text-slate-600 transition">Back to Learning</button>
+                <button onclick="closeArcade()" class="mt-6 w-full text-white/80 font-bold hover:text-white transition drop-shadow-md">Back to Learning</button>
             </div>
 
             <!-- GAME CONTAINER -->
             <div id="game-container" class="hidden relative w-full h-full flex flex-col items-center justify-start pt-4">
                 
-                <div id="game-sentence-display" class="hidden w-full max-w-[340px] mb-4 p-4 bg-white rounded-xl shadow-lg border border-indigo-100 text-center text-xl font-mono z-20 min-h-[80px] flex items-center justify-center flex-wrap gap-1"></div>
+                <div id="game-sentence-display" class="hidden w-full max-w-[340px] mb-4 p-4 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-indigo-100 text-center text-xl font-mono z-20 min-h-[80px] flex items-center justify-center flex-wrap gap-1"></div>
 
                 <!-- Shared Canvas for Tetris (Snake removed) -->
-                <canvas id="gameCanvas" width="300" height="400" class="hidden bg-slate-800 rounded-lg shadow-xl mb-4 shrink-0"></canvas>
+                <canvas id="gameCanvas" width="300" height="400" class="hidden bg-slate-800/90 backdrop-blur rounded-lg shadow-xl mb-4 shrink-0 border-2 border-slate-700"></canvas>
                 
                 <!-- Match-3 Container -->
                 <div id="match3-container" class="hidden w-full flex flex-col items-center">
-                    <div class="bg-indigo-100 text-indigo-800 px-4 py-2 rounded-full mb-4 font-bold shadow-sm">
+                    <div class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full mb-4 font-bold shadow-sm border border-white/30">
                         Points: <span id="match3-score">0</span>
                     </div>
                     <div id="match3-board"></div>
@@ -584,6 +626,16 @@
                 <i data-lucide="settings" class="w-6 h-6"></i>
             </button>
             
+            <!-- Neuer Instant Calm Doppelbutton (VERSCHOBEN IN HEADER) -->
+            <div class="flex items-center bg-teal-50 rounded-full border border-teal-200 overflow-hidden shadow-sm">
+				<button onclick="window.location.href='bubbles.html'" class="px-3 py-1.5 text-xs font-bold text-teal-600 hover:bg-teal-100 transition border-r border-teal-200/60">
+				Instant
+				</button>
+				<button onclick="window.location.href='bubbles-hypno.html'" class="px-3 py-1.5 text-xs font-bold text-teal-600 hover:bg-teal-100 transition">
+				Calm
+				</button>
+			</div>
+
             <div class="flex gap-2 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-xl shadow-sm border border-white/50">
                 <div class="flex items-center gap-1 text-orange-500 font-black" title="Daily Streak">
                     <i data-lucide="flame" class="w-4 h-4 fill-current"></i>
@@ -704,7 +756,8 @@
 
                 <div class="pt-2 flex items-center justify-between">
                     <button id="btn-reset-app" class="text-rose-400 font-bold text-xs hover:text-rose-600 transition">Reset All Data</button>
-                    <div class="flex items-center gap-2">
+					
+					<div class="flex items-center gap-2">
                         <!-- UPDATED: Quick Zen Launch (Standard 60s) -->
                         <button onclick="startManualZen()" class="text-teal-500 hover:text-teal-600 transition opacity-50 hover:opacity-100 p-2 text-xl" title="Start Zen Mode (60s)">
                             🧘
@@ -1213,11 +1266,12 @@
         else if (quality < 3) c.perfectCycleCount = 0; 
         
         // Promotion to Cycle 1 requires 3x Perfect
+        // CHANGED: Interval from 10 to 5 days as requested
         if ((c.cycle || 0) === 0 && c.perfectCycleCount >= 3) {
             c.cycle = 1; 
             c.perfectCycleCount = 0; 
-            c.interval = 10; 
-            c.dueDate = Date.now() + (10 * 24 * 60 * 60 * 1000); 
+            c.interval = 5; // <--- CHANGED from 10 to 5
+            c.dueDate = Date.now() + (5 * 24 * 60 * 60 * 1000); // <--- CHANGED from 10 to 5
             c.repetitions = 3; 
         } 
         // Promotion to Cycle 2 (Mastered) requires 3x Perfect
@@ -1447,7 +1501,8 @@
 
             <div class="flex-grow flex flex-col justify-center relative perspective-1000 mb-6">
                 <div onclick="toggleFlip()" class="w-full aspect-[4/5] sm:aspect-[4/3] relative preserve-3d cursor-pointer card-inner ${isCardFlipped ? 'is-flipped' : ''} group">
-                    <div class="absolute inset-0 bg-white rounded-3xl shadow-xl border-2 border-slate-100 flex flex-col items-center justify-center p-6 backface-hidden group-active:scale-[0.98] transition-all glow-active">
+                    <!-- CHANGED: Added 'card-face-style' class instead of bg-white -->
+                    <div class="absolute inset-0 card-face-style rounded-3xl shadow-xl border-2 border-slate-100 flex flex-col items-center justify-center p-6 backface-hidden group-active:scale-[0.98] transition-all glow-active">
                         <div class="w-full flex justify-between items-start mb-2 absolute top-6 left-0 px-6">
                             <span class="text-xs font-extrabold text-slate-300 tracking-widest uppercase">${lang1}</span>
                             <button onclick="event.stopPropagation(); playSpeech('${escapeHtml(frontText)}', '${lc1}')" class="p-2 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 rounded-full transition">
@@ -1464,7 +1519,8 @@
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i><span>Tap to flip</span>
                         </div>
                     </div>
-                    <div class="absolute inset-0 bg-white rounded-3xl shadow-xl border-2 border-blue-100 rotate-y-180 backface-hidden flex flex-col items-center justify-center p-6 overflow-hidden glow-active">
+                    <!-- CHANGED: Added 'card-face-style-back' class instead of bg-white -->
+                    <div class="absolute inset-0 card-face-style-back rounded-3xl shadow-xl border-2 border-blue-100 rotate-y-180 backface-hidden flex flex-col items-center justify-center p-6 overflow-hidden glow-active">
                         <div class="w-full flex justify-between items-start mb-2 absolute top-6 left-0 px-6">
                              <span class="text-xs font-extrabold text-blue-200 tracking-widest uppercase">${lang2}</span>
                              <button onclick="event.stopPropagation(); playSpeech('${escapeHtml(backText)}', '${lc2}')" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-400 hover:text-blue-600 rounded-full transition">
@@ -2286,14 +2342,18 @@
         }
     }
 
-    // Match-3 Game Class (Ported from suesses.html)
+    /**
+     * UPDATED: Sugar Rush (Match-3) with Smoother Sliding Logic
+     */
     class Match3Game {
         constructor(boardElement, scoreElement) {
             this.type = 'match3';
             this.width = 8;
             this.height = 8;
-            this.candies = ['🍎', '🍊', '🍇', '🥥', '⭐', '💎'];
-            this.grid = [];
+            // CHANGED: Symbols now match the Memory Game set (Brain, Book, etc.) instead of generic sweets
+            this.candies = ['🧠', '📖', '💎', '🚀', '⭐', '🔥', '🎨', '🍕']; 
+            
+            this.grid = []; // Logical Grid
             this.score = 0;
             this.dragStart = null; 
             this.isProcessing = false;
@@ -2306,7 +2366,6 @@
             this.boardElement = boardElement;
             this.scoreElement = scoreElement;
 
-            // Event Listeners references for cleanup
             this.boundMove = null;
             this.boundUp = null;
 
@@ -2325,28 +2384,60 @@
             this.boardElement.innerHTML = '';
             this.grid = [];
 
+            // We use absolute positioning, so logic first
             for (let r = 0; r < this.height; r++) {
                 const row = [];
                 for (let c = 0; c < this.width; c++) {
-                    const tile = document.createElement('div');
-                    tile.classList.add('tile');
-                    tile.dataset.r = r;
-                    tile.dataset.c = c;
-                    
-                    this.addInputListeners(tile, r, c);
-                    this.boardElement.appendChild(tile);
-                    row.push({ element: tile, value: null });
+                    // Create logical slot
+                    row.push({ element: null, value: null });
                 }
                 this.grid.push(row);
             }
         }
 
-        addInputListeners(tile, r, c) {
-            // Maus
-            tile.addEventListener('mousedown', (e) => this.handleInputStart(r, c, e.clientX, e.clientY));
+        // Creates a new Tile DOM Element and places it at r, c
+        spawnTile(r, c, value) {
+            const tile = document.createElement('div');
+            tile.classList.add('tile');
+            // Size for 8x8 grid = 12.5% each
+            tile.style.width = '12.5%';
+            tile.style.height = '12.5%';
             
-            // Touch
+            // Inner content for nicer styling
+            const inner = document.createElement('div');
+            inner.classList.add('tile-inner');
+            inner.innerText = value;
+            tile.appendChild(inner);
+
+            // Set Position
+            this.updateTilePosition(tile, r, c);
+
+            // Listeners
+            this.addInputListeners(tile);
+            
+            // Save to grid
+            this.grid[r][c] = { element: tile, value: value };
+            this.boardElement.appendChild(tile);
+
+            return tile;
+        }
+
+        updateTilePosition(tileElement, r, c) {
+            tileElement.style.left = (c * 12.5) + '%';
+            tileElement.style.top = (r * 12.5) + '%';
+            tileElement.dataset.r = r;
+            tileElement.dataset.c = c;
+        }
+
+        addInputListeners(tile) {
+            tile.addEventListener('mousedown', (e) => {
+                const r = parseInt(tile.dataset.r);
+                const c = parseInt(tile.dataset.c);
+                this.handleInputStart(r, c, e.clientX, e.clientY);
+            });
             tile.addEventListener('touchstart', (e) => {
+                const r = parseInt(tile.dataset.r);
+                const c = parseInt(tile.dataset.c);
                 const touch = e.touches[0];
                 this.handleInputStart(r, c, touch.clientX, touch.clientY);
             }, { passive: false });
@@ -2416,15 +2507,18 @@
 
         selectTile(r, c) {
             if (this.selectedTile) {
-                this.grid[this.selectedTile.r][this.selectedTile.c].element.classList.remove('selected');
+                const prev = this.grid[this.selectedTile.r][this.selectedTile.c].element;
+                if(prev) prev.classList.remove('selected');
             }
             this.selectedTile = { r, c };
-            this.grid[r][c].element.classList.add('selected');
+            const curr = this.grid[r][c].element;
+            if(curr) curr.classList.add('selected');
         }
 
         deselectTile() {
             if (this.selectedTile) {
-                this.grid[this.selectedTile.r][this.selectedTile.c].element.classList.remove('selected');
+                const prev = this.grid[this.selectedTile.r][this.selectedTile.c].element;
+                if(prev) prev.classList.remove('selected');
                 this.selectedTile = null;
             }
         }
@@ -2437,7 +2531,11 @@
             if (!this.isValidPos(r2, c2)) return;
 
             this.isProcessing = true;
+            
+            // 1. Visual Swap
             await this.swapTiles(r1, c1, r2, c2);
+            
+            // 2. Logical Swap
             this.swapData(r1, c1, r2, c2);
 
             const matches = this.findMatches();
@@ -2445,25 +2543,38 @@
             if (matches.length > 0) {
                 await this.processMatches(matches);
             } else {
-                this.swapData(r1, c1, r2, c2);
-                await this.swapTiles(r1, c1, r2, c2);
+                // Undo
+                await this.swapTiles(r1, c1, r2, c2); // Visually back
+                this.swapData(r1, c1, r2, c2); // Logically back
                 this.isProcessing = false;
             }
         }
 
         swapData(r1, c1, r2, c2) {
-            const tempVal = this.grid[r1][c1].value;
-            this.grid[r1][c1].value = this.grid[r2][c2].value;
-            this.grid[r2][c2].value = tempVal;
-
-            this.grid[r1][c1].element.innerText = this.grid[r1][c1].value;
-            this.grid[r2][c2].element.innerText = this.grid[r2][c2].value;
+            const temp = this.grid[r1][c1];
+            this.grid[r1][c1] = this.grid[r2][c2];
+            this.grid[r2][c2] = temp;
+            
+            // Update internal datasets for input handlers
+            if(this.grid[r1][c1].element) {
+                 this.grid[r1][c1].element.dataset.r = r1;
+                 this.grid[r1][c1].element.dataset.c = c1;
+            }
+            if(this.grid[r2][c2].element) {
+                 this.grid[r2][c2].element.dataset.r = r2;
+                 this.grid[r2][c2].element.dataset.c = c2;
+            }
         }
 
         swapTiles(r1, c1, r2, c2) {
-            return new Promise(resolve => {
-                setTimeout(() => resolve(), 150);
-            });
+            // Just move the DOM elements to the other coordinates
+            const el1 = this.grid[r1][c1].element;
+            const el2 = this.grid[r2][c2].element;
+
+            this.updateTilePosition(el1, r2, c2);
+            this.updateTilePosition(el2, r1, c1);
+
+            return new Promise(resolve => setTimeout(resolve, 300));
         }
 
         findMatches() {
@@ -2481,7 +2592,7 @@
                     }
                 }
             }
-            // Vertikal
+            // Vertical
             for (let c = 0; c < this.width; c++) {
                 for (let r = 0; r < this.height - 2; r++) {
                     const v1 = this.grid[r][c].value;
@@ -2501,29 +2612,36 @@
         }
 
         async processMatches(matches) {
-            // Check if game was destroyed mid-process
             if(!this.boardElement.innerHTML) return;
 
             this.score += matches.length * 10;
             this.updateScoreUI();
 
+            // 1. Highlight & Destroy
             for (let {r, c} of matches) {
-                const tile = this.grid[r][c].element;
-                tile.classList.add('match');
-                this.createParticles(tile, this.grid[r][c].value);
-                this.grid[r][c].value = null;
+                const cell = this.grid[r][c];
+                if(cell.element) {
+                    cell.element.classList.add('match');
+                    this.createParticles(cell.element, cell.value);
+                }
             }
 
             await new Promise(r => setTimeout(r, 300));
 
+            // 2. Remove from DOM & Grid
             for (let {r, c} of matches) {
-                this.grid[r][c].element.classList.remove('match');
-                this.grid[r][c].element.innerText = '';
+                const cell = this.grid[r][c];
+                if(cell.element) cell.element.remove();
+                this.grid[r][c] = { element: null, value: null };
             }
 
+            // 3. Gravity
             await this.applyGravity();
+            
+            // 4. Fill Top
             await this.fillEmptySlots();
 
+            // 5. Check Chain Reaction
             const newMatches = this.findMatches();
             if (newMatches.length > 0) {
                 setTimeout(() => this.processMatches(newMatches), 300);
@@ -2534,45 +2652,49 @@
 
         async applyGravity() {
             let moved = false;
+            // Iterate columns
             for (let c = 0; c < this.width; c++) {
-                let emptyRow = this.height - 1;
+                // Process from bottom to top
                 for (let r = this.height - 1; r >= 0; r--) {
-                    if (this.grid[r][c].value !== null) {
-                        if (emptyRow !== r) {
-                            this.grid[emptyRow][c].value = this.grid[r][c].value;
-                            this.grid[emptyRow][c].element.innerText = this.grid[r][c].value;
-                            this.grid[r][c].value = null;
-                            this.grid[r][c].element.innerText = '';
-                            moved = true;
+                    if (this.grid[r][c].value === null) {
+                        // Look for a block above to pull down
+                        for (let k = r - 1; k >= 0; k--) {
+                            if (this.grid[k][c].value !== null) {
+                                // Move k to r
+                                this.grid[r][c] = this.grid[k][c];
+                                this.grid[k][c] = { element: null, value: null };
+                                
+                                // Update Visual
+                                const el = this.grid[r][c].element;
+                                this.updateTilePosition(el, r, c);
+                                
+                                moved = true;
+                                break; // Filled this slot, move to next r
+                            }
                         }
-                        emptyRow--;
                     }
                 }
             }
-            if (moved) await new Promise(r => setTimeout(r, 200));
+            if (moved) await new Promise(r => setTimeout(r, 300));
         }
 
         async fillEmptySlots() {
-            for (let r = 0; r < this.height; r++) {
-                for (let c = 0; c < this.width; c++) {
+            for (let c = 0; c < this.width; c++) {
+                for (let r = 0; r < this.height; r++) {
                     if (this.grid[r][c].value === null) {
                         const randomCandy = this.candies[Math.floor(Math.random() * this.candies.length)];
-                        this.grid[r][c].value = randomCandy;
                         
-                        const el = this.grid[r][c].element;
-                        el.style.opacity = '0';
-                        el.style.transform = 'translateY(-20px)';
-                        el.innerText = randomCandy;
+                        // Create new tile visually "above" the board
+                        const tile = this.spawnTile(r, c, randomCandy);
                         
-                        void el.offsetWidth;
-                        el.style.transition = 'all 0.3s ease-out';
-                        el.style.opacity = '1';
-                        el.style.transform = 'translateY(0)';
+                        // Overwrite start position for falling effect
+                        tile.style.top = '-15%'; 
                         
-                        setTimeout(() => {
-                            el.style.transition = ''; 
-                            el.style.transform = '';
-                        }, 300);
+                        // Force Reflow
+                        void tile.offsetWidth;
+                        
+                        // Animate to actual position
+                        tile.style.top = (r * 12.5) + '%';
                     }
                 }
             }
@@ -2583,30 +2705,38 @@
             for (let r = 0; r < this.height; r++) {
                 for (let c = 0; c < this.width; c++) {
                     let candy;
+                    // Prevent immediate matches on start
                     do {
                         candy = this.candies[Math.floor(Math.random() * this.candies.length)];
                     } while (
                         (c >= 2 && this.grid[r][c-1].value === candy && this.grid[r][c-2].value === candy) ||
                         (r >= 2 && this.grid[r-1][c].value === candy && this.grid[r-2][c].value === candy)
                     );
-                    this.grid[r][c].value = candy;
-                    this.grid[r][c].element.innerText = candy;
+                    
+                    this.spawnTile(r, c, candy);
                 }
             }
         }
 
         resolveMatches(givePoints = false) {
+            // Recursively clear initial matches without animation wait
             const matches = this.findMatches();
             if (matches.length > 0) {
+                // For initial setup, we just brutally regenerate matched cells
+                // Simplest way: just respawn specific tiles without animation
                 for (let {r, c} of matches) {
-                    this.grid[r][c].value = null; 
-                    this.grid[r][c].element.innerText = '';
+                    const el = this.grid[r][c].element;
+                    if(el) el.remove();
+                    
+                    let candy;
+                    do {
+                        candy = this.candies[Math.floor(Math.random() * this.candies.length)];
+                    } while (candy === this.grid[r][c].value); // Ensure it changes
+                    
+                    this.spawnTile(r, c, candy);
                 }
-                this.applyGravity().then(() => {
-                    this.fillEmptySlots().then(() => {
-                         this.resolveMatches(false);
-                    });
-                });
+                // Check again
+                this.resolveMatches(false);
             }
         }
 
@@ -2615,33 +2745,37 @@
         }
 
         createParticles(element, char) {
-            // Nur Partikel erzeugen, wenn Element sichtbar ist
             if(!element) return;
-            
-            for (let i = 0; i < 5; i++) {
+            // Get screen position for particles
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            for (let i = 0; i < 6; i++) {
                 const particle = document.createElement('span');
                 particle.classList.add('particle');
                 particle.innerText = char;
                 particle.style.fontSize = '12px';
-                particle.style.left = '50%';
-                particle.style.top = '50%';
+                // Fixed position relative to viewport for particles to fly free
+                particle.style.position = 'fixed'; 
+                particle.style.left = centerX + 'px';
+                particle.style.top = centerY + 'px';
                 
                 const angle = Math.random() * Math.PI * 2;
-                const distance = 30 + Math.random() * 40;
+                const distance = 40 + Math.random() * 50;
                 const tx = Math.cos(angle) * distance;
                 const ty = Math.sin(angle) * distance;
                 
                 particle.style.setProperty('--tx', `${tx}px`);
                 particle.style.setProperty('--ty', `${ty}px`);
 
-                element.appendChild(particle);
+                document.body.appendChild(particle);
 
                 setTimeout(() => particle.remove(), 800);
             }
         }
         
-        // Interface methods for ArcadeApp
-        handleInput(key) { /* No keyboard input for this game */ }
+        handleInput(key) { /* No keyboard */ }
         pause() { this.isPaused = true; }
         resume() { this.isPaused = false; }
         destroy() {
