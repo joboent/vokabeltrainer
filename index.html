@@ -1467,10 +1467,19 @@
         const lc2 = isEnStart ? 'de-DE' : 'en-US';
 
         const lvlWords = state.words.filter(w => w.lvl === session.level);
-        const total = lvlWords.length;
-        const mastered = lvlWords.filter(w => w.cycle >= 2).length;
-        const waiting = lvlWords.filter(w => w.cycle === 1).length;
-        const pct = total === 0 ? 0 : Math.round(((mastered + waiting*0.5) / total) * 100);
+		const total = lvlWords.length;
+
+		// 1. Kategorie: 6x Perfekt (Cycle >= 2) -> 100%
+		const mastered = lvlWords.filter(w => w.cycle >= 2).length;
+
+		// 2. Kategorie: 3x Perfekt (Cycle == 1) -> 50%
+		const waiting = lvlWords.filter(w => w.cycle === 1).length;
+
+		// 3. Kategorie: Mindestens 1x Perfekt, aber noch nicht Cycle 1 -> 5%
+		const started = lvlWords.filter(w => w.cycle === 0 && w.perfectCycleCount >= 1).length;
+
+		// Neue Formel: (Mastered * 1) + (Waiting * 0.5) + (Started * 0.05)
+		const pct = total === 0 ? 0 : Math.round(((mastered + waiting*0.5 + started*0.05) / total) * 100);
 
         const perfectCount = card.perfectCycleCount || 0;
         let progressDots = '';
