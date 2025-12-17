@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Bubble Popper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117; /* Very dark blue/gray */
+            --zen-color-1: rgba(147, 197, 253, 0.4); /* Blue */
+            --zen-color-2: rgba(200, 150, 250, 0.4); /* Violet */
+            --zen-color-3: rgba(160, 250, 160, 0.4); /* Green */
+            /* Colors for the burst effect */
+            --burst-color-1: rgb(147, 197, 253);
+            --burst-color-2: rgb(200, 150, 250);
+            --burst-color-3: rgb(160, 250, 160);
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            cursor: crosshair; /* Relaxed cursor */
+            background-color: var(--bg-color); /* Ensure the background is dark immediately */
+        }
+
+        /* ----------------------------------------------------------------------
+           Bubble Styling
+        ---------------------------------------------------------------------- */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            box-shadow: 
+                inset 0 0 10px rgba(255, 255, 255, 0.8),
+                0 0 15px rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: opacity 0.3s ease-out, transform 0.1s; /* Short transition for the burst effect */
+            backdrop-filter: blur(2px);
+            will-change: transform, left, top, width, height, opacity;
+            z-index: 10;
+        }
+
+        .bubble.zen-1 { background: radial-gradient(circle at 70% 30%, var(--zen-color-1), transparent); }
+        .bubble.zen-2 { background: radial-gradient(circle at 70% 30%, var(--zen-color-2), transparent); }
+        .bubble.zen-3 { background: radial-gradient(circle at 70% 30%, var(--zen-color-3), transparent); }
+        
+        .bubble.special-vocab {
+            background: radial-gradient(circle at 70% 30%, rgba(255, 165, 0, 0.7), transparent);
+            border: 3px solid rgba(255, 140, 0, 0.9);
+            box-shadow: 0 0 10px #ff8c00, inset 0 0 5px #ffffff;
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            font-weight: 600; 
+            font-size: 1.0rem; 
+            color: #fef3c7; 
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 
+                         0 0 1px rgba(255, 255, 255, 0.5); 
+            z-index: 20; 
+        }
+
+        .bubble-text {
+            pointer-events: none; 
+            text-align: center;
+            padding: 5px;
+            line-height: 1.1;
+        }
+        
+        /* New burst effect for the main bubble */
+        .bubble.bursting {
+            opacity: 0;
+            transform: scale(1.2); 
+            transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+        }
+
+        /* ----------------------------------------------------------------------
+           Bubble Fragments Styling
+        ---------------------------------------------------------------------- */
+        .bubble-fragment {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            opacity: 1;
+            /* Fast transition for fading and movement */
+            transition: transform 0.5s ease-out, opacity 0.5s ease-in;
+            z-index: 50; /* Above the bubble */
+            pointer-events: none;
+        }
+        
+        .fragment-zen-1 { background-color: var(--burst-color-1); box-shadow: 0 0 4px var(--burst-color-1); }
+        .fragment-zen-2 { background-color: var(--burst-color-2); box-shadow: 0 0 4px var(--burst-color-2); }
+        .fragment-zen-3 { background-color: var(--burst-color-3); box-shadow: 0 0 4px var(--burst-color-3); }
+        .fragment-special { background-color: orange; box-shadow: 0 0 4px orange; }
+
+        /* ----------------------------------------------------------------------
+           Background and UI
+        ---------------------------------------------------------------------- */
+        #hypno-spiral-bg {
+            z-index: 1;
+            opacity: 0.35;
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .score-glow {
+            text-shadow: 0 0 8px rgba(45, 212, 191, 0.8), 
+                         0 0 15px rgba(45, 212, 191, 0.4);
+        }
+
+        .streak-message {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        .streak-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Audio Control Button */
+        #audio-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 60;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #audio-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 h-screen w-screen overflow-hidden text-gray-200 antialiased relative">
+    <div id="game-area" class="w-full h-full relative">
+        <canvas id="hypno-spiral-bg"></canvas>
+
+        <div class="absolute top-4 left-4 p-3 bg-gray-800/70 backdrop-blur-sm rounded-xl shadow-lg z-50 transition duration-300 hover:bg-gray-800">
+            <h2 class="text-sm font-light leading-none">Score: 
+                <span id="score" class="text-base font-semibold text-teal-400 score-glow">0</span>
+            </h2>
+            <div id="streak-info" class="mt-1 text-xs text-yellow-400 transition-all duration-300 h-4"></div>
+        </div>
+
+        <!-- Audio Toggle Button -->
+        <button id="audio-toggle" title="Toggle Music">
+            <svg id="audio-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-60">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        const GAME_AREA = document.getElementById('game-area');
+        const SCORE_DISPLAY = document.getElementById('score');
+        const STREAK_INFO = document.getElementById('streak-info');
+        const AUDIO_TOGGLE = document.getElementById('audio-toggle');
+        const AUDIO_ICON = document.getElementById('audio-icon');
+        const BUBBLE_COLORS = ['zen-1', 'zen-2', 'zen-3'];
+        
+        const BUBBLE_SHRINK_RATE = 15; 
+        const BUBBLE_MIN_SIZE = 5;
+
+        const SPIRAL_GLOW_COLORS = [
+            'rgba(102, 255, 255, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 102, 204, 0.8)',
+            'rgba(102, 255, 102, 0.8)'
+        ];
+        const COLOR_SHIFT_DURATION = 2000;
+
+        const SPIRAL_CANVAS = document.getElementById('hypno-spiral-bg');
+        const ctx = SPIRAL_CANVAS.getContext('2d');
+        let spiralAngle = 0;
+        const spiralSpeed = 0.001; 
+        const spiralLineWidth = 1.5;
+        let colorShiftIndex = 0;
+        let lastColorShiftTime = 0;
+
+        let score = 0;
+        let lastColor = null;
+        let streakCount = 0;
+        let bubbles = [];
+        let bubbleIdCounter = 0;
+        let lastFrameTime = performance.now();
+        
+        let gameLoopId = null;
+        let bubbleIntervalId = null;
+        let hasSpecialBubble = false; 
+        
+        // Counter for orange bubble logic
+        let normalBubblesSinceLastSpecial = 0;
+
+        // Web Audio API for meditative music
+        let audioCtx = null;
+        let mainGain = null;
+        let isMuted = false;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            mainGain = audioCtx.createGain();
+            mainGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            mainGain.connect(audioCtx.destination);
+            
+            // Simple meditative sound (Tibetan bowl / sine waves)
+            createAmbientLoop(110); // A2
+            createAmbientLoop(164.81); // E3
+            createAmbientLoop(220); // A3
+        }
+
+        function createAmbientLoop(freq) {
+            const osc = audioCtx.createOscillator();
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            const amp = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(0.1 + Math.random() * 0.1, audioCtx.currentTime);
+            lfoGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(400, audioCtx.currentTime);
+
+            amp.gain.setValueAtTime(0, audioCtx.currentTime);
+            // Sanftes Einblenden
+            amp.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 5);
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            osc.connect(filter);
+            filter.connect(amp);
+            amp.connect(mainGain);
+
+            osc.start();
+            lfo.start();
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) {
+                initAudio();
+            }
+
+            // Wenn AudioContext ausgesetzt ist (typisch bei Autoplay-Blockierung), fortsetzen
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            if (isMuted) {
+                mainGain.gain.setTargetAtTime(0.1, audioCtx.currentTime, 0.5);
+                AUDIO_ICON.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>';
+            } else {
+                mainGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+                AUDIO_ICON.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>';
+            }
+            isMuted = !isMuted;
+        }
+
+        function resizeCanvas() {
+            SPIRAL_CANVAS.width = window.innerWidth;
+            SPIRAL_CANVAS.height = window.innerHeight;
+        }
+
+        function drawSpiral(deltaTime) {
+            const center = { x: SPIRAL_CANVAS.width / 2, y: SPIRAL_CANVAS.height / 2 };
+            const maxRadius = Math.max(center.x, center.y);
+
+            ctx.fillStyle = 'rgba(13, 17, 23, 0.1)'; 
+            ctx.fillRect(0, 0, SPIRAL_CANVAS.width, SPIRAL_CANVAS.height);
+            
+            lastColorShiftTime += deltaTime;
+            if (lastColorShiftTime > COLOR_SHIFT_DURATION) {
+                colorShiftIndex = (colorShiftIndex + 1) % SPIRAL_GLOW_COLORS.length;
+                lastColorShiftTime = 0;
+            }
+
+            const currentColor = SPIRAL_GLOW_COLORS[colorShiftIndex];
+            ctx.shadowColor = currentColor;
+            ctx.shadowBlur = 15; 
+            ctx.strokeStyle = currentColor; 
+            ctx.lineWidth = spiralLineWidth;
+            
+            spiralAngle += spiralSpeed * deltaTime;
+
+            ctx.beginPath();
+            const turns = 10;
+            const step = 0.01;
+            ctx.moveTo(center.x, center.y);
+
+            for (let t = 0; t < turns * Math.PI * 2; t += step) {
+                const k = maxRadius / (turns * Math.PI * 2);
+                const radius = k * t; 
+                const angle = t + spiralAngle; 
+
+                const x = center.x + radius * Math.cos(angle);
+                const y = center.y + radius * Math.sin(angle);
+                
+                ctx.lineTo(x, y);
+                if (radius > maxRadius) break;
+            }
+
+            ctx.stroke();
+            ctx.shadowBlur = 0; 
+            ctx.shadowColor = 'transparent';
+        }
+
+        function initGame() {
+            // Initialize game and audio immediately
+            resizeCanvas();
+            initAudio();
+            
+            window.addEventListener('resize', resizeCanvas);
+
+            // Listener for bubbles and audio toggle
+            GAME_AREA.addEventListener('click', popBubble);
+            AUDIO_TOGGLE.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleAudio();
+            });
+
+            // Start bubble creation and main loop
+            bubbleIntervalId = setInterval(createBubble, 600); 
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function createBubble() {
+            // Logic for orange bubbles: 5% chance, or forced after 40 normal bubbles
+            let isSpecial = (Math.random() < 0.05 || normalBubblesSinceLastSpecial >= 40) && !hasSpecialBubble; 
+            
+            const size = isSpecial ? random(100, 180) : random(50, 150); 
+            const color = isSpecial ? 'special-vocab' : BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
+            
+            if (isSpecial) {
+                normalBubblesSinceLastSpecial = 0;
+            } else {
+                normalBubblesSinceLastSpecial++;
+            }
+
+            let x, y, dx, dy;
+            const marginX = window.innerWidth * 0.1;
+            const marginY = window.innerHeight * 0.1;
+            const side = Math.floor(random(0, 4));
+            const speed = random(0.5, 1.5);
+
+            switch (side) {
+                case 0: x = random(marginX, window.innerWidth - marginX); y = -size; dx = random(-0.5, 0.5); dy = speed; break;
+                case 1: x = window.innerWidth + size; y = random(marginY, window.innerHeight - marginY); dx = -speed; dy = random(-0.5, 0.5); break;
+                case 2: x = random(marginX, window.innerWidth - marginX); y = window.innerHeight + size; dx = random(-0.5, 0.5); dy = -speed; break;
+                case 3: x = -size; y = random(marginY, window.innerHeight - marginY); dx = speed; dy = random(-0.5, 0.5); break;
+            }
+
+            const element = document.createElement('div');
+            element.id = 'bubble-' + bubbleIdCounter;
+            element.classList.add('bubble', color);
+            element.style.width = `${size}px`;
+            element.style.height = `${size}px`;
+            element.style.transform = `translate(${x}px, ${y}px)`;
+            element.dataset.color = color;
+
+            if (isSpecial) {
+                element.dataset.special = 'true';
+                hasSpecialBubble = true;
+                const text = document.createElement('span');
+                text.classList.add('bubble-text');
+                text.textContent = 'ready for Vocab';
+                element.appendChild(text);
+            }
+
+            GAME_AREA.appendChild(element);
+            bubbles.push({
+                id: bubbleIdCounter++,
+                x, y, dx, dy, size, color, element,
+                currentSize: size
+            });
+        }
+
+        function updateBubbles(deltaTime) {
+            const timeFactor = deltaTime / 16.66;
+            const deltaSeconds = deltaTime / 1000;
+
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const bubble = bubbles[i];
+                bubble.x += bubble.dx * timeFactor;
+                bubble.y += bubble.dy * timeFactor;
+                bubble.currentSize -= BUBBLE_SHRINK_RATE * deltaSeconds;
+
+                bubble.element.style.width = `${bubble.currentSize}px`;
+                bubble.element.style.height = `${bubble.currentSize}px`;
+                bubble.element.style.transform = `translate(${bubble.x}px, ${bubble.y}px)`;
+
+                if (bubble.currentSize < BUBBLE_MIN_SIZE) {
+                    if (bubble.element.dataset.special === 'true') hasSpecialBubble = false;
+                    bubble.element.remove();
+                    bubbles.splice(i, 1);
+                    continue;
+                }
+                
+                const margin = 200;
+                if (bubble.x < -bubble.currentSize - margin || bubble.x > window.innerWidth + margin || 
+                    bubble.y < -bubble.currentSize - margin || bubble.y > window.innerHeight + margin) {
+                    if (bubble.element.dataset.special === 'true') hasSpecialBubble = false;
+                    bubble.element.remove();
+                    bubbles.splice(i, 1);
+                }
+            }
+        }
+
+        function createBurstEffect(x, y, size, color) {
+            const numFragments = Math.floor(random(8, 15));
+            let fragmentClass = 'fragment-zen-1';
+            if (color.includes('zen-2')) fragmentClass = 'fragment-zen-2';
+            else if (color.includes('zen-3')) fragmentClass = 'fragment-zen-3';
+            else if (color.includes('special')) fragmentClass = 'fragment-special';
+            
+            const centerX = x + size / 2;
+            const centerY = y + size / 2;
+            const maxDistance = size * 0.8; 
+
+            for (let i = 0; i < numFragments; i++) {
+                const fragment = document.createElement('div');
+                fragment.classList.add('bubble-fragment', fragmentClass);
+                fragment.style.transform = `translate(${centerX}px, ${centerY}px)`;
+                GAME_AREA.appendChild(fragment);
+
+                const angle = random(0, 2 * Math.PI);
+                const distance = random(maxDistance * 0.4, maxDistance);
+                const targetX = centerX + distance * Math.cos(angle);
+                const targetY = centerY + distance * Math.sin(angle);
+
+                setTimeout(() => {
+                    fragment.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.1)`;
+                    fragment.style.opacity = 0;
+                }, 10);
+
+                setTimeout(() => {
+                    fragment.remove();
+                }, 600);
+            }
+        }
+        
+        function popBubble(event) {
+            const element = event.target.closest('.bubble');
+            if (!element || element.classList.contains('bursting')) return;
+
+            const clickedBubble = bubbles.find(b => b.element === element);
+            if (!clickedBubble) return;
+
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            if (audioCtx && !isMuted) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400 + Math.random() * 600, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(mainGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            }
+
+            createBurstEffect(clickedBubble.x, clickedBubble.y, clickedBubble.currentSize, clickedBubble.color);
+
+            if (element.dataset.special === 'true') {
+                hasSpecialBubble = false;
+                element.classList.add('bursting'); 
+                setTimeout(() => {
+                    element.remove();
+                    bubbles = bubbles.filter(b => b.element !== element);
+                    endGame();
+                }, 100); 
+                return;
+            }
+
+            const color = element.dataset.color;
+            let baseScore = 10;
+            let currentPoints = baseScore;
+
+            if (color === lastColor) {
+                streakCount++;
+                const multiplier = 1 + Math.floor(streakCount / 5); 
+                currentPoints = baseScore * multiplier;
+                showStreakMessage(streakCount, currentPoints);
+            } else {
+                streakCount = 1;
+                lastColor = color;
+                showStreakMessage(streakCount, currentPoints, true);
+            }
+
+            score += currentPoints;
+            SCORE_DISPLAY.textContent = score;
+
+            element.classList.add('bursting');
+            element.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                element.remove();
+                bubbles = bubbles.filter(b => b.element !== element);
+            }, 100);
+        }
+
+        function endGame() {
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            if (bubbleIntervalId) clearInterval(bubbleIntervalId);
+            GAME_AREA.removeEventListener('click', popBubble);
+            bubbles.forEach(b => b.element.remove());
+            bubbles = [];
+
+            GAME_AREA.innerHTML += `
+                <div id="end-screen" class="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-50">
+                    <div class="bg-teal-700 text-white p-8 rounded-xl shadow-2xl text-center border-4 border-teal-400">
+                        <h1 class="text-3xl font-bold mb-4">Ready for the Vocabulary Trainer!</h1>
+                        <p class="text-lg">Game ended with ${score} points.</p>
+                        <p class="text-lg mb-4">Simulating return to main program.</p>
+                    </div>
+                </div>
+            `;
+            GAME_AREA.style.cursor = 'default';
+        }
+
+        function showStreakMessage(count, points, reset = false) {
+            STREAK_INFO.classList.remove('streak-visible'); 
+            if (count < 2 || reset) {
+                STREAK_INFO.innerHTML = `<span class="text-gray-400">Score: +${points}</span>`;
+            } else {
+                let text = count >= 10 ? 'Zen Master!' : (count >= 5 ? 'In the Flow!' : 'Streak!');
+                STREAK_INFO.innerHTML = `
+                    <span class="font-bold">${text}</span> 
+                    <span class="text-sm text-yellow-300 ml-1">${count}x</span>
+                    <span class="text-teal-400 ml-2">(+${points} Points)</span>
+                `;
+            }
+            setTimeout(() => STREAK_INFO.classList.add('streak-visible'), 10); 
+        }
+
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+            drawSpiral(deltaTime);
+            updateBubbles(deltaTime);
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
