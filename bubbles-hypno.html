@@ -12,6 +12,8 @@
             --zen-color-1: rgba(147, 197, 253, 0.4); /* Blue */
             --zen-color-2: rgba(200, 150, 250, 0.4); /* Violet */
             --zen-color-3: rgba(160, 250, 160, 0.4); /* Green */
+            --vocab-color: rgba(255, 165, 0, 0.5); /* Orange for Vocab Bubble */
+            
             /* Colors for the burst effect */
             --burst-color-1: rgb(147, 197, 253);
             --burst-color-2: rgb(200, 150, 250);
@@ -38,11 +40,31 @@
             backdrop-filter: blur(2px);
             will-change: transform, left, top, width, height, opacity;
             z-index: 10;
+            /* Flex for centering text if present */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .bubble.zen-1 { background: radial-gradient(circle at 70% 30%, var(--zen-color-1), transparent); }
         .bubble.zen-2 { background: radial-gradient(circle at 70% 30%, var(--zen-color-2), transparent); }
         .bubble.zen-3 { background: radial-gradient(circle at 70% 30%, var(--zen-color-3), transparent); }
+        
+        /* Special Vocab Bubble Style */
+        .bubble.vocab {
+            background: radial-gradient(circle at 70% 30%, var(--vocab-color), rgba(255, 140, 0, 0.2));
+            box-shadow: 
+                inset 0 0 15px rgba(255, 255, 255, 0.9),
+                0 0 25px rgba(255, 165, 0, 0.6);
+            border: 3px solid rgba(255, 200, 100, 0.8);
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            line-height: 1.2;
+            font-size: 1rem;
+            text-align: center;
+            z-index: 20; /* On top of others */
+        }
         
         .bubble-text {
             pointer-events: none; 
@@ -76,6 +98,7 @@
         .fragment-zen-1 { background-color: var(--burst-color-1); box-shadow: 0 0 4px var(--burst-color-1); }
         .fragment-zen-2 { background-color: var(--burst-color-2); box-shadow: 0 0 4px var(--burst-color-2); }
         .fragment-zen-3 { background-color: var(--burst-color-3); box-shadow: 0 0 4px var(--burst-color-3); }
+        .fragment-vocab { background-color: rgb(255, 165, 0); box-shadow: 0 0 4px rgb(255, 165, 0); }
 
         /* ----------------------------------------------------------------------
            Background and UI
@@ -119,12 +142,9 @@
             <div id="streak-info" class="mt-1 text-xs text-yellow-400 transition-all duration-300 h-4"></div>
         </div>
 
-        <!-- Controls (Exit & Audio) -->
+        <!-- Controls (Audio Only) -->
         <div class="absolute top-4 right-4 z-50 flex gap-2">
-            <!-- Permanent Back Button -->
-            <a href="index.html" title="Back to Trainer" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 no-underline border border-gray-700 hover:border-gray-500">
-                <span class="text-xl leading-none font-bold text-gray-300">✕</span>
-            </a>
+            <!-- X Button Removed -->
             
             <button id="audio-toggle" title="Toggle Music" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 border border-gray-700 hover:border-gray-500">
                 <svg id="audio-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-60">
@@ -169,6 +189,8 @@
         let bubbleIdCounter = 0;
         let lastFrameTime = performance.now();
         
+        let totalBubblesCreated = 0; // Counter for Vocab bubbles
+
         let gameLoopId = null;
         let bubbleIntervalId = null;
         
@@ -310,9 +332,24 @@
         }
 
         function createBubble() {
-            // No Special Bubbles anymore, just normal Zen
-            const size = random(50, 150); 
-            const color = BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
+            totalBubblesCreated++;
+            
+            // Check if this should be a "Vocab" bubble (every 50th)
+            const isVocabBubble = (totalBubblesCreated % 50 === 0);
+
+            let size;
+            let color;
+            let className = "bubble";
+            
+            if (isVocabBubble) {
+                size = 140; // Fixed size for readability
+                color = 'vocab'; // Special class
+                className += ' vocab';
+            } else {
+                size = random(50, 150);
+                color = BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
+                className += ' ' + color;
+            }
             
             let x, y, dx, dy;
             const marginX = window.innerWidth * 0.1;
@@ -329,17 +366,22 @@
 
             const element = document.createElement('div');
             element.id = 'bubble-' + bubbleIdCounter;
-            element.classList.add('bubble', color);
+            element.className = className;
             element.style.width = `${size}px`;
             element.style.height = `${size}px`;
             element.style.transform = `translate(${x}px, ${y}px)`;
             element.dataset.color = color;
+            
+            if (isVocabBubble) {
+                element.innerHTML = '<span>Time for Vocab</span>';
+            }
 
             GAME_AREA.appendChild(element);
             bubbles.push({
                 id: bubbleIdCounter++,
                 x, y, dx, dy, size, color, element,
-                currentSize: size
+                currentSize: size,
+                isVocab: isVocabBubble
             });
         }
 
@@ -351,7 +393,11 @@
                 const bubble = bubbles[i];
                 bubble.x += bubble.dx * timeFactor;
                 bubble.y += bubble.dy * timeFactor;
-                bubble.currentSize -= BUBBLE_SHRINK_RATE * deltaSeconds;
+                
+                // Only normal bubbles shrink. Vocab bubble stays readable.
+                if (!bubble.isVocab) {
+                    bubble.currentSize -= BUBBLE_SHRINK_RATE * deltaSeconds;
+                }
 
                 bubble.element.style.width = `${bubble.currentSize}px`;
                 bubble.element.style.height = `${bubble.currentSize}px`;
@@ -375,7 +421,9 @@
         function createBurstEffect(x, y, size, color) {
             const numFragments = Math.floor(random(8, 15));
             let fragmentClass = 'fragment-zen-1';
-            if (color.includes('zen-2')) fragmentClass = 'fragment-zen-2';
+            
+            if (color === 'vocab') fragmentClass = 'fragment-vocab';
+            else if (color.includes('zen-2')) fragmentClass = 'fragment-zen-2';
             else if (color.includes('zen-3')) fragmentClass = 'fragment-zen-3';
             
             const centerX = x + size / 2;
@@ -429,6 +477,16 @@
             }
 
             createBurstEffect(clickedBubble.x, clickedBubble.y, clickedBubble.currentSize, clickedBubble.color);
+
+            // --- VOCAB BUBBLE LOGIC ---
+            if (clickedBubble.isVocab) {
+                element.classList.add('bursting');
+                element.style.pointerEvents = 'none';
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 100);
+                return; // Stop normal score logic
+            }
 
             const color = element.dataset.color;
             let baseScore = 10;
