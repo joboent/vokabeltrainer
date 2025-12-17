@@ -17,6 +17,7 @@
             --zen-color-1: rgba(147, 197, 253, 0.4);
             --zen-color-2: rgba(200, 150, 250, 0.4);
             --zen-color-3: rgba(160, 250, 160, 0.4);
+            --vocab-color: rgba(255, 165, 0, 0.5); /* Orange for Vocab Bubble */
         }
         
         body {
@@ -36,12 +37,31 @@
             will-change: transform, left, top;
             z-index: 10;
             user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
 
         .bubble.zen-1 { background: radial-gradient(circle at 70% 30%, var(--zen-color-1), transparent); }
         .bubble.zen-2 { background: radial-gradient(circle at 70% 30%, var(--zen-color-2), transparent); }
         .bubble.zen-3 { background: radial-gradient(circle at 70% 30%, var(--zen-color-3), transparent); }
         
+        /* Special Vocab Bubble Style */
+        .bubble.vocab {
+            background: radial-gradient(circle at 70% 30%, var(--vocab-color), rgba(255, 140, 0, 0.2));
+            box-shadow: 
+                inset 0 0 15px rgba(255, 255, 255, 0.9),
+                0 0 25px rgba(255, 165, 0, 0.6);
+            border: 3px solid rgba(255, 200, 100, 0.8);
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            line-height: 1.2;
+            font-size: 1rem;
+            z-index: 20; /* On top of others */
+        }
+
         .bubble.popped {
             opacity: 0;
             transform: scale(2.0) rotate(5deg); 
@@ -103,12 +123,9 @@
             <div id="streak-info" class="mt-1 text-xs text-yellow-400 transition-all duration-300 h-4"></div>
         </div>
         
-        <!-- Controls (Exit & Audio) -->
+        <!-- Controls (Audio Only now) -->
         <div class="absolute top-4 right-4 z-50 flex gap-2">
-            <!-- Permanent Back Button -->
-            <a href="index.html" title="Back to Trainer" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 no-underline border border-gray-700 hover:border-gray-500">
-                <span class="text-xl leading-none font-bold text-gray-300">✕</span>
-            </a>
+            <!-- X Button Removed -->
             
             <button id="audio-toggle" title="Toggle Music" class="p-3 bg-gray-800/70 backdrop-blur-sm rounded-full text-white hover:bg-gray-700 transition duration-200 shadow-lg flex items-center justify-center w-12 h-12 border border-gray-700 hover:border-gray-500">
                 <span id="audio-icon" class="text-xl leading-none">🔈</span>
@@ -133,6 +150,8 @@
         let lastFrameTime = performance.now();
         let isPlayingMusic = false;
         
+        let totalBubblesCreated = 0; 
+
         let gameLoopId = null;
         let bubbleIntervalId = null;
         
@@ -249,9 +268,26 @@
         function random(min, max) { return Math.random() * (max - min) + min; }
 
         function createBubble() {
-            // Only normal bubbles now, no special vocab bubbles
-            const size = random(50, 150); 
-            const color = BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
+            totalBubblesCreated++;
+            
+            // Check if this should be a "Vocab" bubble (every 50th)
+            const isVocabBubble = (totalBubblesCreated % 50 === 0);
+
+            let size;
+            let color;
+            let text = "";
+            let className = "bubble";
+            
+            if (isVocabBubble) {
+                size = 140; // Fixed size for readability
+                color = 'vocab'; // Special orange class
+                text = "Time for Vocab";
+                className += " vocab";
+            } else {
+                size = random(50, 150);
+                color = BUBBLE_COLORS[Math.floor(random(0, BUBBLE_COLORS.length))];
+                className += " " + color;
+            }
             
             let x, y, dx, dy;
             const side = Math.floor(random(0, 4));
@@ -264,24 +300,38 @@
             else { x = -size; y = random(window.innerHeight*margin, window.innerHeight*(1-margin)); dx = speed; dy = random(-0.5, 0.5); }
 
             const element = document.createElement('div');
-            element.classList.add('bubble', color);
+            element.className = className;
             element.style.width = `${size}px`;
             element.style.height = `${size}px`;
             element.style.transform = `translate(${x}px, ${y}px)`;
             element.dataset.color = color;
+            
+            if (isVocabBubble) {
+                element.innerHTML = `<span>${text}</span>`;
+                element.dataset.isVocab = "true";
+            }
 
             GAME_AREA.appendChild(element);
-            bubbles.push({ x, y, dx, dy, size, element });
+            bubbles.push({ 
+                x, y, dx, dy, size, element, 
+                isVocab: isVocabBubble 
+            });
         }
 
         function moveBubbles(deltaTime) {
             const timeFactor = deltaTime / 16.66;
+            
             for (let i = bubbles.length - 1; i >= 0; i--) {
                 const b = bubbles[i];
+                
                 b.x += b.dx * timeFactor;
                 b.y += b.dy * timeFactor;
                 b.element.style.transform = `translate(${b.x}px, ${b.y}px)`;
-                if (b.x < -b.size-200 || b.x > window.innerWidth+200 || b.y < -b.size-200 || b.y > window.innerHeight+200) {
+                
+                // Only remove if it goes off screen
+                const isOffScreen = b.x < -b.size-200 || b.x > window.innerWidth+200 || b.y < -b.size-200 || b.y > window.innerHeight+200;
+                
+                if (isOffScreen) {
                     b.element.remove();
                     bubbles.splice(i, 1);
                 }
@@ -292,7 +342,20 @@
             const element = event.target.closest('.bubble');
             if (!element || element.classList.contains('popped')) return;
             const idx = bubbles.findIndex(b => b.element === element);
+            if (idx === -1) return;
+            
             const bData = bubbles[idx];
+
+            // --- VOCAB BUBBLE LOGIC ---
+            if (bData.isVocab) {
+                // Clicking this replaces the 'X' button functionality
+                element.classList.add('popped');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 100);
+                return; // Stop normal score logic
+            }
+
             createParticles(bData.x, bData.y, bData.size);
 
             const color = element.dataset.color;
