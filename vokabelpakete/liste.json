@@ -3,6 +3,7 @@
   { "file": "A1_travel.json", "name": "✈️ Niveau A1 Travel" },
   { "file": "A2_beginner.json", "name": "✨ Niveau A2 Beginner" },
   { "file": "A2_travel.json", "name": "✈️ Niveau A2 Travel" },
+  { "file": "A1-A1 medicine.json", "name": "💊️ Niveau A1/A2 Medicine" },
   { "file": "A1-A2_business.json", "name": "💼 Niveau A1/A2 Business" },
   { "file": "B1-B2 generally.json", "name": "✨ Niveau B1/B2 Generally" },
   { "file": "B1-B2 travel.json", "name": "✈️ Niveau B1/B2 Travel" },
@@ -12,5 +13,6 @@
   { "file": "C1-C2 business.json", "name": "💼 Niveau C1/C2 Business" },
   { "file": "Simple.json", "name": "😊 Simple Words/Sentences" },
   { "file": "idioms.json", "name": "👹 Idioms" },
+  { "file": "cruise_ship.json", "name": "🚢 Special Cruise Ship" },
   { "file": "All.json", "name": "❤️All vocabulary packages❤️" }
 ]
